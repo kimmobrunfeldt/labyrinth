@@ -10,11 +10,18 @@ const pieceToSvg: Record<Type, string> = {
   't-shape': tShape,
 }
 
+export const STYLES = {
+  display: 'inline-block',
+  width: '40px',
+  height: '40px',
+  margin: 0,
+  padding: 0,
+}
+
 export const Piece = ({ rotation, icon, type }: PieceType) => {
   const common = {
     style: {
-      width: '40px',
-      height: '40px',
+      ...STYLES,
       transform: `rotate(${rotation}deg)`,
     },
   }
@@ -22,8 +29,6 @@ export const Piece = ({ rotation, icon, type }: PieceType) => {
   return <img alt="" src={pieceToSvg[type]} {...common} />
 }
 
-export const EmptyPiece = () => (
-  <div style={{ width: '40px', height: '40px' }} />
-)
+export const EmptyPiece = () => <div style={{ ...STYLES }} />
 
 export default Piece
