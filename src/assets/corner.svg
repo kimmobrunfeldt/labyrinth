@@ -3,11 +3,11 @@
 <rect width="400" height="400" fill="white"/>
 <rect x="322" width="78" height="78" fill="#D7D7D7"/>
 <rect width="78" height="400" fill="#D7D7D7"/>
-<line x1="83" y1="-5" x2="83" y2="400" stroke="black" stroke-width="10"/>
+<line x1="78" y1="-2.18557e-07" x2="78" y2="405" stroke="black" stroke-width="10"/>
 <rect x="400" y="322" width="78" height="400" transform="rotate(90 400 322)" fill="#D7D7D7"/>
-<line x1="405" y1="83" x2="322" y2="83" stroke="black" stroke-width="10"/>
-<line x1="327" y1="-2.18557e-07" x2="327" y2="78" stroke="black" stroke-width="10"/>
-<line x1="400" y1="327" x2="78" y2="327" stroke="black" stroke-width="10"/>
+<line x1="400" y1="78" x2="317" y2="78" stroke="black" stroke-width="10"/>
+<line x1="322" y1="-2.18557e-07" x2="322" y2="78" stroke="black" stroke-width="10"/>
+<line x1="399.985" y1="322.006" x2="72.9846" y2="321" stroke="black" stroke-width="10"/>
 </g>
 <defs>
 <clipPath id="clip0_1_7">

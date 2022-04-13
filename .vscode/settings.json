@@ -9,16 +9,18 @@
   "[typescript]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint",
     "editor.formatOnSave": false,
-    "editor.codeActionsOnSave": {
-      "source.organizeImports": true
-    }
+    "editor.codeActionsOnSave": [
+      "source.organizeImports",
+      "source.fixAll.eslint"
+    ]
   },
   "[typescriptreact]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint",
     "editor.formatOnSave": false,
-    "editor.codeActionsOnSave": {
-      "source.organizeImports": true
-    }
+    "editor.codeActionsOnSave": [
+      "source.organizeImports",
+      "source.fixAll.eslint"
+    ]
   },
   "files.trimTrailingWhitespace": true,
   "editor.codeActionsOnSave": {

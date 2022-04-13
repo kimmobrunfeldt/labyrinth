@@ -6,6 +6,7 @@ type FillBoardOptions = {
   maxFillPieces?: number
   pieces?: Piece[]
 }
+
 export function fillBoard(
   board: Board,
   { maxFillPieces = Infinity, pieces = createPieces() }: FillBoardOptions = {}
@@ -28,6 +29,7 @@ export function fillBoard(
       filled += 1
       return {
         // We know there's enough pieces
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         ...pieces.pop()!,
         rotation: _.sample<Rotation>([0, 90, 180, 270]),
       }
@@ -35,11 +37,11 @@ export function fillBoard(
   )
 }
 
-function isFilled(board: Board): board is FilledBoard {
+export function isFilled(board: Board): board is FilledBoard {
   return board.every((row) => row.every((piece) => !_.isNull(piece)))
 }
 
-function emptyPiecesCount(board: Board): number {
+export function emptyPiecesCount(board: Board): number {
   return _.sum(
     board.map((row) => _.sum(row.map((piece) => (_.isNull(piece) ? 1 : 0))))
   )
