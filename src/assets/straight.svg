@@ -1,14 +1,14 @@
 <svg width="400" height="400" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g clip-path="url(#clip0_1_26)">
-<rect width="400" height="400" transform="translate(1.90735e-05 400) rotate(-90)" fill="white"/>
-<rect x="4.76837e-06" y="78" width="78" height="400" transform="rotate(-90 4.76837e-06 78)" fill="#D7D7D7"/>
-<rect x="1.90735e-05" y="400" width="78" height="400" transform="rotate(-90 1.90735e-05 400)" fill="#D7D7D7"/>
-<line x1="-4.99996" y1="322" x2="400" y2="322" stroke="black" stroke-width="10"/>
-<line x1="-4.99999" y1="78" x2="400" y2="78" stroke="black" stroke-width="10"/>
+<rect width="400" height="400" fill="white"/>
+<rect x="322" width="78" height="400" fill="#D7D7D7"/>
+<rect width="78" height="400" fill="#D7D7D7"/>
+<line x1="78" y1="-5" x2="78" y2="400" stroke="black" stroke-width="10"/>
+<line x1="322" y1="-5" x2="322" y2="400" stroke="black" stroke-width="10"/>
 </g>
 <defs>
 <clipPath id="clip0_1_26">
-<rect width="400" height="400" fill="white" transform="translate(1.90735e-05 400) rotate(-90)"/>
+<rect width="400" height="400" fill="white"/>
 </clipPath>
 </defs>
 </svg>

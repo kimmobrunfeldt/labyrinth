@@ -2,7 +2,7 @@ import React from 'react'
 import corner from 'src/assets/corner.svg'
 import straight from 'src/assets/straight.svg'
 import tShape from 'src/assets/t-shape.svg'
-import { Piece as PieceType, Type } from 'src/core/types'
+import { Piece as PieceType, Position, Type } from 'src/core/types'
 
 export const PIECE_MARGIN_PX = 4
 export const PIECE_WIDTH = 80
@@ -28,14 +28,27 @@ export const Piece = ({
   icon,
   type,
   isLastInRow,
-}: PieceType & { isLastInRow: boolean }) => {
+  onClick,
+  style,
+  position,
+}: PieceType & {
+  isLastInRow: boolean
+  onClick?: (pos: Position, event: React.MouseEvent) => void
+  style: React.CSSProperties
+  position: Position
+}) => {
+  const props = onClick
+    ? { onClick: (e: React.MouseEvent) => onClick(position, e) }
+    : {}
   return (
     <div
+      {...props}
       style={{
         ...STYLES,
         marginRight: isLastInRow ? 0 : `${PIECE_MARGIN_PX}px`,
         position: 'relative',
         transform: `rotate(${Math.random() * 1.5}deg)`,
+        ...style,
       }}
     >
       <img
@@ -68,13 +81,21 @@ export const Piece = ({
   )
 }
 
-export const EmptyPiece = ({ isLastInRow }: { isLastInRow: boolean }) => (
+export const EmptyPiece = ({
+  isLastInRow,
+  style,
+}: {
+  isLastInRow: boolean
+  style: React.CSSProperties
+  position: Position
+}) => (
   <div
     style={{
       ...STYLES,
       background: '#eee',
       transform: `rotate(${Math.random() * 1.5}deg)`,
       marginRight: isLastInRow ? 0 : `${PIECE_MARGIN_PX}px`,
+      ...style,
     }}
   />
 )

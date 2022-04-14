@@ -31,5 +31,17 @@ export type Piece = {
   rotation?: Rotation
   icon?: Icon
 }
-export type Board = Array<Array<Piece | null>>
-export type FilledBoard = Array<Array<Piece>>
+export type PositionPiece = Piece & {
+  position: Position
+}
+export type NeighborPiece = {
+  piece: PositionPiece
+  direction: Direction
+}
+export type Board = Array<Array<PositionPiece | null>>
+export type FilledBoard = Array<Array<PositionPiece>>
+
+export type Position = { x: number; y: number }
+export type NeighborPosition = Position & { direction: Direction }
+export type Direction = 'up' | 'right' | 'down' | 'left'
+export type OpenDirections = Record<Direction, boolean>

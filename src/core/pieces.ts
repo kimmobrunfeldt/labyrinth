@@ -1,47 +1,53 @@
 import _ from 'lodash'
 import { Board, Piece } from 'src/core/types'
 
-export const createBoard: () => Board = () => [
-  [
-    { type: 'corner', rotation: 90 },
-    null,
-    { type: 't-shape', rotation: 90, icon: 'KnightHelmet' },
-    null,
-    { type: 't-shape', rotation: 90, icon: 'ThreeCandles' },
-    null,
-    { type: 'corner', rotation: 180 },
-  ],
-  [null, null, null, null, null, null, null],
-  [
-    { type: 't-shape', icon: 'Dagger' },
-    null,
-    { type: 't-shape', icon: 'Diamond' },
-    null,
-    { type: 't-shape', rotation: 90, icon: 'TreasureChest' },
-    null,
-    { type: 't-shape', rotation: 180, icon: 'Ring' },
-  ],
-  [null, null, null, null, null, null, null],
-  [
-    { type: 't-shape', icon: 'HolyGrail' },
-    null,
-    { type: 't-shape', rotation: 270, icon: 'Keys' },
-    null,
-    { type: 't-shape', rotation: 180, icon: 'Crown' },
-    null,
-    { type: 't-shape', rotation: 180, icon: 'Potion' },
-  ],
-  [null, null, null, null, null, null, null],
-  [
-    { type: 'corner' },
-    null,
-    { type: 't-shape', rotation: 270, icon: 'Coins' },
-    null,
-    { type: 't-shape', rotation: 270, icon: 'Book' },
-    null,
-    { type: 'corner', rotation: 270 },
-  ],
-]
+export const createBoard: () => Board = () => {
+  const initial: Array<Array<Piece | null>> = [
+    [
+      { type: 'corner', rotation: 90 },
+      null,
+      { type: 't-shape', rotation: 90, icon: 'KnightHelmet' },
+      null,
+      { type: 't-shape', rotation: 90, icon: 'ThreeCandles' },
+      null,
+      { type: 'corner', rotation: 180 },
+    ],
+    [null, null, null, null, null, null, null],
+    [
+      { type: 't-shape', icon: 'Dagger' },
+      null,
+      { type: 't-shape', icon: 'Diamond' },
+      null,
+      { type: 't-shape', rotation: 90, icon: 'TreasureChest' },
+      null,
+      { type: 't-shape', rotation: 180, icon: 'Ring' },
+    ],
+    [null, null, null, null, null, null, null],
+    [
+      { type: 't-shape', icon: 'HolyGrail' },
+      null,
+      { type: 't-shape', rotation: 270, icon: 'Keys' },
+      null,
+      { type: 't-shape', rotation: 180, icon: 'Crown' },
+      null,
+      { type: 't-shape', rotation: 180, icon: 'Potion' },
+    ],
+    [null, null, null, null, null, null, null],
+    [
+      { type: 'corner' },
+      null,
+      { type: 't-shape', rotation: 270, icon: 'Coins' },
+      null,
+      { type: 't-shape', rotation: 270, icon: 'Book' },
+      null,
+      { type: 'corner', rotation: 270 },
+    ],
+  ]
+
+  return initial.map((row, y) =>
+    row.map((piece, x) => (piece ? { ...piece, position: { x, y } } : null))
+  )
+}
 
 export const createPieces: () => Piece[] = () =>
   _.shuffle(
