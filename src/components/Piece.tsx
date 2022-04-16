@@ -27,12 +27,10 @@ export const Piece = ({
   rotation,
   icon,
   type,
-  isLastInRow,
   onClick,
   style,
   position,
 }: PieceType & {
-  isLastInRow: boolean
   onClick?: (pos: Position, event: React.MouseEvent) => void
   style: React.CSSProperties
   position: Position
@@ -45,9 +43,8 @@ export const Piece = ({
       {...props}
       style={{
         ...STYLES,
-        marginRight: isLastInRow ? 0 : `${PIECE_MARGIN_PX}px`,
-        position: 'relative',
-        transform: `rotate(${Math.random() * 1.5}deg)`,
+        // transform: `rotate(${Math.random() * 1.5}deg)`,
+        transformOrigin: '50% 50%',
         ...style,
       }}
     >
@@ -59,6 +56,7 @@ export const Piece = ({
           top: 0,
           left: 0,
           position: 'absolute',
+          transition: 'transform 50ms ease',
           transform: `rotate(${rotation ? rotation : 0}deg)`,
         }}
       />
@@ -82,10 +80,8 @@ export const Piece = ({
 }
 
 export const EmptyPiece = ({
-  isLastInRow,
   style,
 }: {
-  isLastInRow: boolean
   style: React.CSSProperties
   position: Position
 }) => (
@@ -94,7 +90,6 @@ export const EmptyPiece = ({
       ...STYLES,
       background: '#eee',
       transform: `rotate(${Math.random() * 1.5}deg)`,
-      marginRight: isLastInRow ? 0 : `${PIECE_MARGIN_PX}px`,
       ...style,
     }}
   />

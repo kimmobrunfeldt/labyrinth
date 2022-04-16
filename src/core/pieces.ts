@@ -14,9 +14,9 @@ export const createBoard: () => Board = () => {
     ],
     [null, null, null, null, null, null, null],
     [
-      { type: 't-shape', icon: 'Dagger' },
+      { type: 't-shape', icon: 'Dagger', rotation: 0 },
       null,
-      { type: 't-shape', icon: 'Diamond' },
+      { type: 't-shape', icon: 'Diamond', rotation: 0 },
       null,
       { type: 't-shape', rotation: 90, icon: 'TreasureChest' },
       null,
@@ -24,7 +24,7 @@ export const createBoard: () => Board = () => {
     ],
     [null, null, null, null, null, null, null],
     [
-      { type: 't-shape', icon: 'HolyGrail' },
+      { type: 't-shape', icon: 'HolyGrail', rotation: 0 },
       null,
       { type: 't-shape', rotation: 270, icon: 'Keys' },
       null,
@@ -34,7 +34,7 @@ export const createBoard: () => Board = () => {
     ],
     [null, null, null, null, null, null, null],
     [
-      { type: 'corner' },
+      { type: 'corner', rotation: 0 },
       null,
       { type: 't-shape', rotation: 270, icon: 'Coins' },
       null,
@@ -51,20 +51,20 @@ export const createBoard: () => Board = () => {
 
 export const createPieces: () => Piece[] = () =>
   _.shuffle(
-    _.times<Piece>(12, () => ({ type: 'straight' }))
-      .concat(_.times(10, () => ({ type: 'corner' })))
+    _.times<Piece>(12, () => ({ rotation: 0, type: 'straight' }))
+      .concat(_.times(10, () => ({ rotation: 0, type: 'corner' })))
       .concat([
-        { type: 'corner', icon: 'Mouse' },
-        { type: 'corner', icon: 'Spider' },
-        { type: 't-shape', icon: 'Pony' },
-        { type: 't-shape', icon: 'Bat' },
-        { type: 't-shape', icon: 'Ghost' },
-        { type: 'corner', icon: 'Cat' },
-        { type: 't-shape', icon: 'Mermaid' },
-        { type: 't-shape', icon: 'Dinosaur' },
-        { type: 't-shape', icon: 'Goblin' },
-        { type: 'corner', icon: 'Owl' },
-        { type: 'corner', icon: 'Lizard' },
-        { type: 'corner', icon: 'Bug' },
+        { rotation: 0, type: 'corner', icon: 'Mouse' },
+        { rotation: 0, type: 'corner', icon: 'Spider' },
+        { rotation: 0, type: 't-shape', icon: 'Pony' },
+        { rotation: 0, type: 't-shape', icon: 'Bat' },
+        { rotation: 0, type: 't-shape', icon: 'Ghost' },
+        { rotation: 0, type: 'corner', icon: 'Cat' },
+        { rotation: 0, type: 't-shape', icon: 'Mermaid' },
+        { rotation: 0, type: 't-shape', icon: 'Dinosaur' },
+        { rotation: 0, type: 't-shape', icon: 'Goblin' },
+        { rotation: 0, type: 'corner', icon: 'Owl' },
+        { rotation: 0, type: 'corner', icon: 'Lizard' },
+        { rotation: 0, type: 'corner', icon: 'Bug' },
       ])
   )

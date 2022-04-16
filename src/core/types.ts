@@ -28,7 +28,7 @@ export type Icon =
 
 export type Piece = {
   type: Type
-  rotation?: Rotation
+  rotation: Rotation
   icon?: Icon
 }
 export type PositionPiece = Piece & {
@@ -45,3 +45,10 @@ export type Position = { x: number; y: number }
 export type NeighborPosition = Position & { direction: Direction }
 export type Direction = 'up' | 'right' | 'down' | 'left'
 export type OpenDirections = Record<Direction, boolean>
+
+export type Subgraph = PositionPiece[]
+export type NonEmptyArray<T> = [T, ...T[]]
+
+export function isNonEmptyArray<T>(arr: T[]): arr is NonEmptyArray<T> {
+  return arr.length > 0
+}
