@@ -5,12 +5,23 @@ import { NonEmptyArray, Piece, Type } from 'src/core/types'
 describe('getWeightedRandomPieceIndex', () => {
   test('produces correct distribution', () => {
     const pieces = _.times<Piece>(100, () => ({
+      id: _.uniqueId('piece'),
       rotation: 0,
       type: 'straight',
     }))
-      .concat(_.times<Piece>(100, () => ({ rotation: 0, type: 't-shape' })))
       .concat(
-        _.times<Piece>(100, () => ({ rotation: 0, type: 'corner' }))
+        _.times<Piece>(100, () => ({
+          id: _.uniqueId('piece'),
+          rotation: 0,
+          type: 't-shape',
+        }))
+      )
+      .concat(
+        _.times<Piece>(100, () => ({
+          id: _.uniqueId('piece'),
+          rotation: 0,
+          type: 'corner',
+        }))
       ) as NonEmptyArray<Piece>
 
     const chosenTypes: Type[] = []

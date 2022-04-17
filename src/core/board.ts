@@ -1,55 +1,62 @@
 import _ from 'lodash'
-import { createPieces } from 'src/core/pieces'
+import { createPieceBag } from 'src/core/pieces'
 import {
   Board,
+  ConnectedPieces,
   Direction,
   FilledBoard,
   NeighborPiece,
   NeighborPosition,
   NonEmptyArray,
-  OpenDirections,
   Piece,
+  PieceOnBoard,
   Position,
-  PositionPiece,
+  PushPosition,
   Rotation,
-  Subgraph,
   Type,
+  WalkableDirections,
 } from 'src/core/types'
 
 type FillBoardOptions = {
   maxFillPieces?: number
-  pieces?: Piece[]
+  pieceBag?: Piece[]
 }
 
-export function fillBoard(
+export function randomFillBoard(
   board: Board,
-  { maxFillPieces = Infinity, pieces = createPieces() }: FillBoardOptions = {}
-): Board {
+  {
+    maxFillPieces = Infinity,
+    pieceBag = createPieceBag(),
+  }: FillBoardOptions = {}
+) {
   let filled = 0
-  if (emptyPiecesCount(board) !== pieces.length - 1) {
+  if (emptyPiecesCount(board) !== pieceBag.length - 1) {
     throw new Error(
-      `${emptyPiecesCount(board)} empty pieces on board but got ${
-        pieces.length
-      } pieces`
+      `${emptyPiecesCount(
+        board
+      )} empty pieces on board but got piece bag with ${pieceBag.length} pieces`
     )
   }
 
-  return board.map((row, y) =>
-    row.map((piece, x) => {
-      if (piece || filled >= maxFillPieces) {
-        return piece
+  for (let y = 0; y < board.pieces.length; ++y) {
+    for (let x = 0; x < board.pieces[0].length; ++x) {
+      const piece = board.pieces[y][x]
+      if (piece) {
+        continue // leave already filled pieces as is
       }
 
+      // We know there's enough pieces
+      board.pieces[y][x] = toPositionPiece(assertDefined(pieceBag.pop()), {
+        x,
+        y,
+      })
+
       filled += 1
-      return {
-        // We know there's enough pieces
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        ...assertDefined(pieces.pop()),
-        rotation: assertDefined(_.sample<Rotation>([0, 90, 180, 270])),
-        position: { x, y },
+      if (filled >= maxFillPieces) {
+        return
       }
-    })
-  )
+    }
+  }
 }
 
 export function addPiece(board: Board, piece: Piece) {
@@ -57,12 +64,12 @@ export function addPiece(board: Board, piece: Piece) {
     throw new Error('Board already full')
   }
 
-  for (let y = 0; y < board.length; ++y) {
-    for (let x = 0; x < board[0].length; ++x) {
-      if (!board[y][x]) {
-        const placed: PositionPiece = toPositionPiece(piece, { x, y })
+  for (let y = 0; y < board.pieces.length; ++y) {
+    for (let x = 0; x < board.pieces[0].length; ++x) {
+      if (!board.pieces[y][x]) {
+        const placed: PieceOnBoard = toPositionPiece(piece, { x, y })
 
-        board[y][x] = placed
+        board.pieces[y][x] = placed
         return placed
       }
     }
@@ -75,9 +82,9 @@ export function removeRandomPiece(board: Board) {
   const filledCount = filledPiecesCount(board)
   const randomIndex = Math.floor(Math.random() * filledCount)
   let i = 0
-  for (let y = 0; y < board.length; ++y) {
-    for (let x = 0; x < board[0].length; ++x) {
-      if (!_.isNull(board[y][x]) && !isLockedPiece({ x, y })) {
+  for (let y = 0; y < board.pieces.length; ++y) {
+    for (let x = 0; x < board.pieces[0].length; ++x) {
+      if (isPieceOnBoard(board.pieces[y][x]) && !isLockedPiece({ x, y })) {
         if (i === randomIndex) {
           return assertDefined(removePiece(board, { x, y }))
         }
@@ -94,7 +101,7 @@ export function toPositionPiece(
   piece: Piece,
   position: Position,
   { rotation = assertDefined(_.sample<Rotation>([0, 90, 180, 270])) } = {}
-): PositionPiece {
+): PieceOnBoard {
   return {
     ...piece,
     position,
@@ -102,9 +109,14 @@ export function toPositionPiece(
   }
 }
 
+export function toPiece(positionPiece: PieceOnBoard): Piece {
+  const { position: _position, ...piece } = positionPiece
+  return piece
+}
+
 export function removePiece(board: Board, pos: Position) {
-  const piece = board[pos.y][pos.x]
-  board[pos.y][pos.x] = null
+  const piece = board.pieces[pos.y][pos.x]
+  board.pieces[pos.y][pos.x] = null
   return piece
 }
 
@@ -124,6 +136,7 @@ export function getWeightedRandomPieceIndex(arr: NonEmptyArray<Piece>): number {
     't-shape': 90,
     corner: 5,
   }
+  // Not performant, but there's just a short list of pieces to deal with
   const ranges = arr.reduce((memo, piece, index) => {
     const prevMax = memo[index - 1]?.max ?? -1
     memo.push({
@@ -143,36 +156,63 @@ export function getWeightedRandomPieceIndex(arr: NonEmptyArray<Piece>): number {
 }
 
 export function isFilled(board: Board): board is FilledBoard {
-  return board.every((row) => row.every((piece) => !_.isNull(piece)))
+  return board.pieces.every((row) =>
+    row.every((piece) => isPieceOnBoard(piece))
+  )
 }
 
 export function emptyPiecesCount(board: Board): number {
   return _.sum(
-    board.map((row) => _.sum(row.map((piece) => (_.isNull(piece) ? 1 : 0))))
+    board.pieces.map((row) =>
+      _.sum(row.map((piece) => (isPieceOnBoard(piece) ? 0 : 1)))
+    )
   )
 }
 
 export function filledPiecesCount(board: Board): number {
   return _.sum(
-    board.map((row) =>
+    board.pieces.map((row) =>
       _.sum(
         row.map((piece) =>
-          !_.isNull(piece) && !isLockedPiece(piece.position) ? 1 : 0
+          isPieceOnBoard(piece) && !isLockedPiece(piece.position) ? 1 : 0
         )
       )
     )
   )
 }
 
-export function getPieceAt(board: FilledBoard, pos: Position): PositionPiece {
-  return board[pos.y][pos.x]
+export function isPieceOnBoard(piece: Piece | null): piece is PieceOnBoard {
+  return !_.isUndefined(piece?.position)
+}
+
+export function getPieceAt(board: FilledBoard, pos: Position): PieceOnBoard {
+  return board.pieces[pos.y][pos.x]
+}
+
+export function placePieceAt(
+  board: FilledBoard,
+  pos: Position,
+  piece: Piece
+): PieceOnBoard {
+  if (getPieceAt(board, pos)) {
+    throw new Error(
+      `Unable to place piece at position ${[
+        pos.x,
+        pos.y,
+      ]}. Another piece already there.`
+    )
+  }
+
+  return (board.pieces[pos.y][pos.x] = toPositionPiece(piece, pos, {
+    rotation: piece.rotation,
+  }))
 }
 
 export function maybeGetPieceAt(
   board: Board,
   pos: Position
-): PositionPiece | null {
-  return board[pos.y][pos.x]
+): PieceOnBoard | null {
+  return board.pieces[pos.y][pos.x]
 }
 
 export function isLockedPiece(pos: Position): boolean {
@@ -184,10 +224,10 @@ export function getNeighbors(
   position: Position
 ): NeighborPiece[] {
   const positions: NeighborPosition[] = [
-    getPositionInDirection(position, 'up'),
-    getPositionInDirection(position, 'right'),
-    getPositionInDirection(position, 'down'),
-    getPositionInDirection(position, 'left'),
+    getPositionInDirection(board, position, 'up'),
+    getPositionInDirection(board, position, 'right'),
+    getPositionInDirection(board, position, 'down'),
+    getPositionInDirection(board, position, 'left'),
   ]
   const validPositions = positions.filter((pos) => isOnBoard(board, pos))
   return validPositions
@@ -214,9 +254,10 @@ export function getOppositeDirection(direction: Direction): Direction {
 export function getPieceInDirection(
   board: Board,
   from: Position,
-  direction: Direction
-): PositionPiece | null {
-  const newPos = getPositionInDirection(from, direction)
+  direction: Direction,
+  moves = 1
+): PieceOnBoard | null {
+  const newPos = getPositionInDirection(board, from, direction, { moves })
   if (!isOnBoard(board, newPos)) {
     return null
   }
@@ -225,19 +266,33 @@ export function getPieceInDirection(
 }
 
 export function getPositionInDirection(
+  board: Board,
   pos: Position,
-  direction: Direction
+  direction: Direction,
+  { moves = 1, throwOnError = false } = {}
 ): NeighborPosition {
   const { x, y } = pos
   switch (direction) {
     case 'up':
-      return { x, y: y - 1, direction: 'up' }
+      if (throwOnError && y - moves < 0) {
+        throw new Error(`Trying to move too much up to ${[x, y - moves]}`)
+      }
+      return { x, y: y - moves, direction: 'up' }
     case 'right':
-      return { x: x + 1, y, direction: 'right' }
+      if (throwOnError && x + moves > board.pieces[0].length - 1) {
+        throw new Error(`Trying to move too much right to ${[x + moves, y]}`)
+      }
+      return { x: x + moves, y, direction: 'right' }
     case 'down':
-      return { x, y: y + 1, direction: 'down' }
+      if (throwOnError && y + moves > board.pieces.length - 1) {
+        throw new Error(`Trying to move too much down to ${[x, y + moves]}`)
+      }
+      return { x, y: y + moves, direction: 'down' }
     case 'left':
-      return { x: x - 1, y, direction: 'left' }
+      if (throwOnError && x - moves < 0) {
+        throw new Error(`Trying to move too much left to ${[x - moves, y]}`)
+      }
+      return { x: x - moves, y, direction: 'left' }
   }
 }
 
@@ -255,20 +310,20 @@ export function isValidMove(from: Piece, to: NeighborPiece): boolean {
 }
 
 export function isOnBoard(board: Board, { x, y }: Position): boolean {
-  const width = board.length - 1
-  const height = board[0].length - 1
+  const width = board.pieces.length - 1
+  const height = board.pieces[0].length - 1
   return x >= 0 && x <= width && y >= 0 && y <= height
 }
 
 export function findSubgraphsWithMoreThanXConnectedVertices(
   board: Board,
   maxEdges: number
-): Subgraph[] {
-  const offending: PositionPiece[][] = []
-  const allPieces: PositionPiece[] = _.flatten(board).filter(
-    (p): p is PositionPiece => !_.isNull(p)
+): ConnectedPieces[] {
+  const offending: PieceOnBoard[][] = []
+  const allPieces: PieceOnBoard[] = _.flatten(board.pieces).filter(
+    (p): p is PieceOnBoard => !_.isNull(p)
   )
-  const visited = new Set<PositionPiece>()
+  const visited = new Set<PieceOnBoard>()
 
   while (allPieces.length > 0) {
     const current = assertDefined(allPieces.pop()) // while loop checks for length
@@ -276,7 +331,7 @@ export function findSubgraphsWithMoreThanXConnectedVertices(
       continue
     }
 
-    const pieces = fill(board, new Set<PositionPiece>([current]))
+    const pieces = findConnected(board, new Set<PieceOnBoard>([current]))
     if (pieces.length > maxEdges) {
       offending.push(pieces)
     }
@@ -320,14 +375,14 @@ export function assertDefined<T>(val: T | undefined | null): T {
 export function changeRandomPiece(
   board: Board,
   pieces: Piece[],
-  changeable: PositionPiece[]
+  changeable: PieceOnBoard[]
 ) {
   const pieceToRemove = assertDefined(_.sample(changeable))
   const removed = assertDefined(removePiece(board, pieceToRemove.position))
 
   const newPiece = popRandom(assertNonEmpty(pieces))
   pieces.push(removed) // add back the previously removed
-  board[removed.position.y][removed.position.x] = toPositionPiece(
+  board.pieces[removed.position.y][removed.position.x] = toPositionPiece(
     newPiece,
     removed.position
   )
@@ -359,34 +414,43 @@ function sampleNormalDistricution<T>(arr: T[]): T | undefined {
   return arr[Math.floor(randomNormalDistribution() * arr.length)]
 }
 
-export function randomFreePieceToRotate(subgraphs: Subgraph[]) {
+export function randomFreePieceToRotate(subgraphs: ConnectedPieces[]) {
   const graph = assertDefined(_.sample(subgraphs))
   const freePieces = graph.filter((p) => !isLockedPiece(p.position))
   return _.sample(freePieces)
   return sampleNormalDistricution(freePieces)
 }
 
-export function rotatePiece(board: Board, pos: Position) {
+export function rotatePiece(
+  board: Board,
+  pos: Position,
+  direction: -90 | 90 = +90
+) {
   if (isLockedPiece(pos)) {
-    throw new Error(`[${pos.y}, ${pos.x}] is locked piece`)
+    throw new Error(`[${pos.x}, ${pos.y}] is locked piece`)
   }
 
-  const piece = board[pos.y][pos.x]
+  const piece = board.pieces[pos.y][pos.x]
   if (!piece) {
-    throw new Error(`Unable to rotate: no piece at [${pos.y}, ${pos.x}]`)
+    throw new Error(`Unable to rotate: no piece at [${pos.x}, ${pos.y}]`)
   }
 
-  const newRotation =
-    piece.rotation === 270 ? 0 : ((piece.rotation + 90) as Rotation)
+  let newRotation = (piece.rotation + direction) as Rotation
+  if (newRotation > 270) {
+    newRotation = 0
+  }
+  if (newRotation < 0) {
+    newRotation = 270
+  }
   piece.rotation = newRotation
 }
 
-export function fill(
+export function findConnected(
   board: Board,
-  current: Set<PositionPiece>,
-  visited: Set<PositionPiece> = new Set()
-): PositionPiece[] {
-  const nextBatch = new Set<PositionPiece>()
+  current: Set<PieceOnBoard>,
+  visited: Set<PieceOnBoard> = new Set()
+): PieceOnBoard[] {
+  const nextBatch = new Set<PieceOnBoard>()
 
   current.forEach((p) => {
     visited.add(p)
@@ -402,13 +466,26 @@ export function fill(
   })
 
   if (nextBatch.size > 0) {
-    fill(board, nextBatch, visited)
+    findConnected(board, nextBatch, visited)
   }
 
   return [...visited]
 }
 
-const pieceToOpenDirections: Record<Type, Record<Rotation, OpenDirections>> = {
+export function isValidPlayerMove(
+  board: FilledBoard,
+  fromPos: Position,
+  toPos: Position
+): boolean {
+  const piece = getPieceAt(board, fromPos)
+  const connected = findConnected(board, new Set<PieceOnBoard>([piece]))
+  return connected.findIndex((c) => c.position === toPos) !== -1
+}
+
+const pieceToOpenDirections: Record<
+  Type,
+  Record<Rotation, WalkableDirections>
+> = {
   corner: {
     0: { up: true, right: true, down: false, left: false },
     90: { up: false, right: true, down: true, left: false },
@@ -448,4 +525,75 @@ export function createRingBuffer<T>({ max }: { max: number }) {
   }
 
   return { push, get, clear }
+}
+
+/**
+ * Returns the piece that fell off the other side
+ */
+export function pushWithPiece(
+  board: FilledBoard,
+  pushPos: PushPosition,
+  pushPiece: Piece
+): Piece {
+  if (!isAllowedPushPosition(pushPos)) {
+    throw new Error(`Unallowed push position: [${pushPos.x}, ${pushPos.y}]`)
+  }
+
+  const removePos = getPositionInDirection(
+    board,
+    pushPos,
+    pushPos.direction,
+    // XXX: Assumes square
+    { moves: board.pieces.length - 1, throwOnError: true }
+  )
+  const extraPiece = toPiece(assertDefined(removePiece(board, removePos)))
+  // Starting from the piece next to removed towards the push position, move pieces one
+  // by one
+  for (let i = 0; i < board.pieces.length - 1; ++i) {
+    const fromPosition = getPositionInDirection(
+      board,
+      removePos,
+      getOppositeDirection(pushPos.direction),
+      { moves: i + 1, throwOnError: true }
+    )
+    const toPosition = getPositionInDirection(
+      board,
+      removePos,
+      getOppositeDirection(pushPos.direction),
+      { moves: i, throwOnError: true }
+    )
+
+    const fromPiece = getPieceAt(board, fromPosition)
+    placePieceAt(board, toPosition, fromPiece) // add to new position
+    removePiece(board, fromPosition) // remove old
+  }
+  placePieceAt(board, pushPos, pushPiece)
+
+  return extraPiece
+}
+
+const pushPositions: readonly PushPosition[] = [
+  // top
+  { x: 1, y: 0, direction: 'down' },
+  { x: 3, y: 0, direction: 'down' },
+  { x: 5, y: 0, direction: 'down' },
+  // right
+  { x: 6, y: 1, direction: 'left' },
+  { x: 6, y: 3, direction: 'left' },
+  { x: 6, y: 5, direction: 'left' },
+  // bottom
+  { x: 5, y: 6, direction: 'up' },
+  { x: 3, y: 6, direction: 'up' },
+  { x: 1, y: 6, direction: 'up' },
+  // left
+  { x: 0, y: 5, direction: 'right' },
+  { x: 0, y: 3, direction: 'right' },
+  { x: 0, y: 1, direction: 'right' },
+]
+
+export function isAllowedPushPosition(pos: Position) {
+  return (
+    pushPositions.findIndex((item) => item.x === pos.x && item.y === pos.y) !==
+    -1
+  )
 }

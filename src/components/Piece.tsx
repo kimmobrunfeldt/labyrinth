@@ -2,9 +2,9 @@ import React from 'react'
 import corner from 'src/assets/corner.svg'
 import straight from 'src/assets/straight.svg'
 import tShape from 'src/assets/t-shape.svg'
-import { Piece as PieceType, Position, Type } from 'src/core/types'
+import { Piece, Position, Type } from 'src/core/types'
 
-export const PIECE_MARGIN_PX = 4
+export const PIECE_MARGIN_PX = 2
 export const PIECE_WIDTH = 80
 
 const pieceToSvg: Record<Type, string> = {
@@ -19,18 +19,18 @@ export const STYLES = {
   height: `${PIECE_WIDTH}px`,
   margin: 0,
   padding: 0,
-  borderRadius: '6px',
+  borderRadius: '5px',
   overflow: 'hidden',
 }
 
-export const Piece = ({
+const PieceComponent = ({
   rotation,
-  icon,
+  trophy: icon,
   type,
   onClick,
   style,
   position,
-}: PieceType & {
+}: Piece & {
   onClick?: (pos: Position, event: React.MouseEvent) => void
   style: React.CSSProperties
   position: Position
@@ -95,4 +95,4 @@ export const EmptyPiece = ({
   />
 )
 
-export default Piece
+export default PieceComponent
