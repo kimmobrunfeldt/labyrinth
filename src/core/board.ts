@@ -1,4 +1,5 @@
 import _ from 'lodash'
+import { format } from 'src/core/game'
 import { createPieceBag } from 'src/core/pieces'
 import {
   Board,
@@ -102,16 +103,17 @@ export function toPositionPiece(
   position: Position,
   { rotation = assertDefined(_.sample<Rotation>([0, 90, 180, 270])) } = {}
 ): PieceOnBoard {
-  return {
-    ...piece,
-    position,
-    rotation,
-  }
+  const p = piece as PieceOnBoard
+  p.position = position
+  p.rotation = rotation
+  p.players = []
+  return p
 }
 
 export function toPiece(positionPiece: PieceOnBoard): Piece {
-  const { position: _position, ...piece } = positionPiece
-  return piece
+  const p = positionPiece as Piece
+  delete p.position
+  return p
 }
 
 export function removePiece(board: Board, pos: Position) {
@@ -192,7 +194,7 @@ export function getPieceAt(board: FilledBoard, pos: Position): PieceOnBoard {
 export function placePieceAt(
   board: FilledBoard,
   pos: Position,
-  piece: Piece
+  piece: Piece | PieceOnBoard
 ): PieceOnBoard {
   if (getPieceAt(board, pos)) {
     throw new Error(
@@ -203,9 +205,15 @@ export function placePieceAt(
     )
   }
 
-  return (board.pieces[pos.y][pos.x] = toPositionPiece(piece, pos, {
-    rotation: piece.rotation,
-  }))
+  if (isPieceOnBoard(piece)) {
+    piece.position = pos
+    board.pieces[pos.y][pos.x] = piece
+  } else {
+    board.pieces[pos.y][pos.x] = toPositionPiece(piece, pos, {
+      rotation: piece.rotation,
+    })
+  }
+  return board.pieces[pos.y][pos.x]
 }
 
 export function maybeGetPieceAt(
@@ -534,7 +542,7 @@ export function pushWithPiece(
   board: FilledBoard,
   pushPos: PushPosition,
   pushPiece: Piece
-): Piece {
+): { piece: Piece; originalPiece: PieceOnBoard } {
   if (!isAllowedPushPosition(pushPos)) {
     throw new Error(`Unallowed push position: [${pushPos.x}, ${pushPos.y}]`)
   }
@@ -546,6 +554,7 @@ export function pushWithPiece(
     // XXX: Assumes square
     { moves: board.pieces.length - 1, throwOnError: true }
   )
+  const pieceToRemove = getPieceAt(board, removePos)
   const extraPiece = toPiece(assertDefined(removePiece(board, removePos)))
   // Starting from the piece next to removed towards the push position, move pieces one
   // by one
@@ -569,10 +578,13 @@ export function pushWithPiece(
   }
   placePieceAt(board, pushPos, pushPiece)
 
-  return extraPiece
+  return {
+    piece: extraPiece,
+    originalPiece: pieceToRemove,
+  }
 }
 
-const pushPositions: readonly PushPosition[] = [
+export const pushPositions: readonly PushPosition[] = [
   // top
   { x: 1, y: 0, direction: 'down' },
   { x: 3, y: 0, direction: 'down' },
@@ -595,5 +607,15 @@ export function isAllowedPushPosition(pos: Position) {
   return (
     pushPositions.findIndex((item) => item.x === pos.x && item.y === pos.y) !==
     -1
+  )
+}
+
+export function getPushPosition(pos: Position): PushPosition {
+  if (!isAllowedPushPosition(pos)) {
+    throw new Error(`Unallowed push position: ${format.pos(pos)}`)
+  }
+
+  return assertDefined(
+    pushPositions.find((item) => item.x === pos.x && item.y === pos.y)
   )
 }

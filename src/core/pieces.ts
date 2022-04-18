@@ -49,7 +49,12 @@ export const createInitialBoardPieces: () => Board['pieces'] = () => {
   return initial.map((row, y) =>
     row.map((piece, x) =>
       piece
-        ? { ...piece, id: _.uniqueId(PIECE_ID_PREFIX), position: { x, y } }
+        ? {
+            ...piece,
+            id: _.uniqueId(PIECE_ID_PREFIX),
+            position: { x, y },
+            players: [],
+          }
         : null
     )
   )
@@ -77,28 +82,28 @@ export const createPieceBag: () => Piece[] = () =>
 
 export const createDeck: () => Card[] = () =>
   _.shuffle([
-    { visible: false, found: false, trophy: 'KnightHelmet' },
-    { visible: false, found: false, trophy: 'ThreeCandles' },
-    { visible: false, found: false, trophy: 'Dagger' },
-    { visible: false, found: false, trophy: 'Diamond' },
-    { visible: false, found: false, trophy: 'TreasureChest' },
-    { visible: false, found: false, trophy: 'Ring' },
-    { visible: false, found: false, trophy: 'HolyGrail' },
-    { visible: false, found: false, trophy: 'Keys' },
-    { visible: false, found: false, trophy: 'Crown' },
-    { visible: false, found: false, trophy: 'Potion' },
-    { visible: false, found: false, trophy: 'Coins' },
-    { visible: false, found: false, trophy: 'Book' },
-    { visible: false, found: false, trophy: 'Mouse' },
-    { visible: false, found: false, trophy: 'Spider' },
-    { visible: false, found: false, trophy: 'Pony' },
-    { visible: false, found: false, trophy: 'Bat' },
-    { visible: false, found: false, trophy: 'Ghost' },
-    { visible: false, found: false, trophy: 'Cat' },
-    { visible: false, found: false, trophy: 'Mermaid' },
-    { visible: false, found: false, trophy: 'Dinosaur' },
-    { visible: false, found: false, trophy: 'Goblin' },
-    { visible: false, found: false, trophy: 'Owl' },
-    { visible: false, found: false, trophy: 'Lizard' },
-    { visible: false, found: false, trophy: 'Bug' },
+    { found: false, trophy: 'KnightHelmet' },
+    { found: false, trophy: 'ThreeCandles' },
+    { found: false, trophy: 'Dagger' },
+    { found: false, trophy: 'Diamond' },
+    { found: false, trophy: 'TreasureChest' },
+    { found: false, trophy: 'Ring' },
+    { found: false, trophy: 'HolyGrail' },
+    { found: false, trophy: 'Keys' },
+    { found: false, trophy: 'Crown' },
+    { found: false, trophy: 'Potion' },
+    { found: false, trophy: 'Coins' },
+    { found: false, trophy: 'Book' },
+    { found: false, trophy: 'Mouse' },
+    { found: false, trophy: 'Spider' },
+    { found: false, trophy: 'Pony' },
+    { found: false, trophy: 'Bat' },
+    { found: false, trophy: 'Ghost' },
+    { found: false, trophy: 'Cat' },
+    { found: false, trophy: 'Mermaid' },
+    { found: false, trophy: 'Dinosaur' },
+    { found: false, trophy: 'Goblin' },
+    { found: false, trophy: 'Owl' },
+    { found: false, trophy: 'Lizard' },
+    { found: false, trophy: 'Bug' },
   ])

@@ -1,25 +1,60 @@
+// Game control loop
+
+export type PlayerUI = {
+  askForPush: () => Promise<{ position: PushPosition; rotation: Rotation }>
+  askForMove: () => Promise<Position>
+}
+
+// TODO: Separate public and private state
+export type Server = {
+  getMyPosition: () => Position
+  getMyCurrentCards: () => Card[]
+
+  // TODO: implement
+  setExtraPieceRotation?: (rotation: Rotation) => Promise<void>
+  setMyName?: (name: string) => Promise<void>
+}
+
+export type ControlledPlayer = {
+  onStateChange: (gameState: Game) => Promise<void>
+  getPush: () => Promise<{
+    position: PushPosition
+    rotation: Rotation
+  }>
+  getMove: () => Promise<Position>
+}
+
 // Game
 export type GameCommonProperties = {
   players: Player[]
   cards: Card[]
+  playerHasPushed: boolean
   playerTurn: number
+  playerWhoStarted: number
 }
 export type Game = GameSetup | GamePlaying | GameFinished
+export type GameStage = 'setup' | 'playing' | 'finished'
 export type GameSetup = GameCommonProperties & {
-  state: 'setup'
+  stage: 'setup'
   board: Board
   pieceBag: Piece[]
+  winners: []
 }
 export type GamePlaying = GameCommonProperties & {
-  state: 'playing'
+  stage: 'playing'
   board: FilledBoard
   pieceBag: [Piece]
+  winners: []
 }
 export type GameFinished = GameCommonProperties & {
-  state: 'finished'
+  stage: 'finished'
   board: FilledBoard
   pieceBag: [Piece]
+  winners: NonEmptyArray<Player>
 }
+export type GameByStages<T extends GameStage[]> = {
+  [K in keyof T]: Game & { stage: T[K] }
+}[number]
 
 // Player
 export type Player = {
@@ -42,11 +77,9 @@ export enum PlayerColor {
 
 export type Board = {
   pieces: Array<Array<PieceOnBoard | null>>
-  playerPositions: Record<string, Position | null>
 }
 export type FilledBoard = {
   pieces: Array<Array<PieceOnBoard>>
-  playerPositions: Record<string, Position>
 }
 export type Position = {
   x: number
@@ -59,6 +92,7 @@ export type WalkableDirections = Record<Direction, boolean>
 export type ConnectedPieces = PieceOnBoard[]
 export type PieceOnBoard = Omit<Piece, 'position'> & {
   position: Position
+  players: Player[]
 }
 export type NeighborPiece = {
   piece: PieceOnBoard
@@ -104,7 +138,6 @@ export type Piece = {
 // Cards
 export type Card = {
   trophy: Trophy
-  visible: boolean
   found: boolean
 }
 
@@ -114,3 +147,11 @@ export type NonEmptyArray<T> = [T, ...T[]]
 export function isNonEmptyArray<T>(arr: T[]): arr is NonEmptyArray<T> {
   return arr.length > 0
 }
+
+export type NonStrictParameters<F> = F extends (...args: unknown[]) => unknown
+  ? Parameters<F>
+  : never
+
+export type NonStrictReturnType<F> = F extends (...args: unknown[]) => unknown
+  ? ReturnType<F>
+  : never

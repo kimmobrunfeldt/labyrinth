@@ -12,7 +12,6 @@ import {
   isLockedPiece,
   isPieceOnBoard,
   popIndex,
-  pushWithPiece,
   randomFillBoard,
   randomFreePieceToRotate,
   removePiece,
@@ -248,6 +247,8 @@ export async function systematic2({ setBoard }: UiForAlgorithm) {
   }
 
   return board
+
+  /*
   setBoard(board)
 
   while (true) {
@@ -260,6 +261,7 @@ export async function systematic2({ setBoard }: UiForAlgorithm) {
     pieces.push(extra)
     setBoard(board)
   }
+  */
 }
 
 export default Board

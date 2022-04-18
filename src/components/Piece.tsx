@@ -2,7 +2,7 @@ import React from 'react'
 import corner from 'src/assets/corner.svg'
 import straight from 'src/assets/straight.svg'
 import tShape from 'src/assets/t-shape.svg'
-import { Piece, Position, Type } from 'src/core/types'
+import { Piece, PieceOnBoard, Type } from 'src/core/types'
 
 export const PIECE_MARGIN_PX = 2
 export const PIECE_WIDTH = 80
@@ -24,23 +24,14 @@ export const STYLES = {
 }
 
 const PieceComponent = ({
-  rotation,
-  trophy: icon,
-  type,
-  onClick,
+  piece,
   style,
-  position,
-}: Piece & {
-  onClick?: (pos: Position, event: React.MouseEvent) => void
+}: {
+  piece: Piece | PieceOnBoard
   style: React.CSSProperties
-  position: Position
 }) => {
-  const props = onClick
-    ? { onClick: (e: React.MouseEvent) => onClick(position, e) }
-    : {}
   return (
     <div
-      {...props}
       style={{
         ...STYLES,
         // transform: `rotate(${Math.random() * 1.5}deg)`,
@@ -50,14 +41,14 @@ const PieceComponent = ({
     >
       <img
         alt=""
-        src={pieceToSvg[type]}
+        src={pieceToSvg[piece.type]}
         style={{
           ...STYLES,
           top: 0,
           left: 0,
           position: 'absolute',
           transition: 'transform 50ms ease',
-          transform: `rotate(${rotation ? rotation : 0}deg)`,
+          transform: `rotate(${piece.rotation ? piece.rotation : 0}deg)`,
         }}
       />
       <div
@@ -73,18 +64,13 @@ const PieceComponent = ({
           fontSize: '10px',
         }}
       >
-        <span>{icon}</span>
+        <span>{piece.trophy}</span>
       </div>
     </div>
   )
 }
 
-export const EmptyPiece = ({
-  style,
-}: {
-  style: React.CSSProperties
-  position: Position
-}) => (
+export const EmptyPiece = ({ style }: { style: React.CSSProperties }) => (
   <div
     style={{
       ...STYLES,
