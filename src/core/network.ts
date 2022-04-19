@@ -20,4 +20,6 @@ function connectClient(serverPeerId: string) {
   conn.on('open', () => {
     conn.send('hi!')
   })
+
+  conn.on('data', (data) => {})
 }

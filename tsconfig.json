@@ -23,8 +23,11 @@
     "paths": {
       "src/*": [
         "./src/*"
+      ],
+      "*": [
+        "src/types/*"
       ]
-    }
+    },
   },
   "include": [
     "src"

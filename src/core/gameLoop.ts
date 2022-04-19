@@ -1,6 +1,10 @@
 import { createGame, CreateGameOptions } from 'src/core/game'
 import * as t from 'src/core/types'
 
+export type PublicGameLoopMethods = Awaited<
+  ReturnType<typeof createGameLoop>
+>['publicMethods']
+
 export async function createGameLoop(gameOpts: CreateGameOptions) {
   const game = createGame(gameOpts)
 
@@ -82,10 +86,26 @@ export async function createGameLoop(gameOpts: CreateGameOptions) {
     )
   }
 
+  function getPublicState(): t.PublicGame {
+    const { cards: _allGameCards, ...state } = game.getState()
+    return {
+      ...state,
+      players: state.players.map(({ cards: _playerCards, ...p }) => {
+        return {
+          ...p,
+          currentCards: game.getPlayersCurrentCards(p.id),
+        }
+      }),
+    }
+  }
+
   return {
     turn,
     getState: game.getState,
     start,
     addPlayer,
+    publicMethods: {
+      getPublicState,
+    },
   }
 }

@@ -24,6 +24,10 @@ export type ControlledPlayer = {
   getMove: () => Promise<Position>
 }
 
+export type PublicGame = Omit<Game, 'cards' | 'players'> & {
+  players: Array<Omit<Player, 'cards'> & { currentCards: Card[] }>
+}
+
 // Game
 export type GameCommonProperties = {
   players: Player[]
@@ -104,14 +108,14 @@ export type Type = 'straight' | 'corner' | 't-shape'
 export type Rotation = 0 | 90 | 180 | 270
 export type Trophy =
   | 'KnightHelmet'
-  | 'ThreeCandles'
+  | 'Candles'
   | 'Mouse'
   | 'Spider'
   | 'Pony'
   | 'Dagger'
   | 'Diamond'
   | 'Bat'
-  | 'TreasureChest'
+  | 'Treasure'
   | 'Ghost'
   | 'Ring'
   | 'Cat'

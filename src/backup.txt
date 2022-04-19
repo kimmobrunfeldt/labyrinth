@@ -1,0 +1,132 @@
+import _ from 'lodash'
+import React, { useEffect, useState } from 'react'
+import {
+    PIECE_MARGIN_PX,
+    PIECE_WIDTH
+} from 'src/components/Piece'
+import {
+    findConnected, maybeGetPieceAt
+} from 'src/core/board'
+import { createInitialBoardPieces } from 'src/core/pieces'
+import {
+    PieceOnBoard,
+    Position,
+    type Board
+} from 'src/core/types'
+
+type Ui = {
+  setBoard: React.Dispatch<React.SetStateAction<BoardType>>
+  setBoardUi: React.Dispatch<
+    React.SetStateAction<
+      {
+        opacity: number
+      }[][]
+    >
+  >
+  markPieces: (pieces: PieceOnBoard[]) => void
+}
+
+const Board = () => {
+  const [board, setBoard] = useState<BoardType>(createInitialBoardPieces())
+  const [boardUi, setBoardUi] = useState<{ opacity: number }[][]>(
+    board.map((row) => row.map(() => ({ opacity: 1 })))
+  )
+
+  function markPieces(pieces: PieceOnBoard[]) {
+    const newBoardUi = _.cloneDeep(boardUi).map((row) =>
+      row.map(() => ({ opacity: 0.2 }))
+    )
+    const markedBoardUi = newBoardUi.map((row, y) =>
+      row.map((p1, x) => {
+        const shouldMark = pieces.some(
+          (p2) => p2.position.x === x && p2.position.y === y
+        )
+        return shouldMark ? { opacity: 1 } : newBoardUi[y][x]
+      })
+    )
+    setBoardUi(markedBoardUi)
+  }
+
+  function onClickPiece(position: Position) {
+    const clickedPiece = maybeGetPieceAt(board, position)
+    if (!clickedPiece) {
+      console.log('No piece')
+      return
+    }
+    const newBoardUi = _.cloneDeep(boardUi).map((row) =>
+      row.map(() => ({ opacity: 0.5 }))
+    )
+
+    const pieces = findConnected(board, new Set<PieceOnBoard>([clickedPiece]))
+    pieces.forEach((p) => {
+      newBoardUi[p.position.y][p.position.x] = { opacity: 1 }
+    })
+
+    setBoardUi(newBoardUi)
+  }
+
+  useEffect(() => {
+    const ui: Ui = {
+      setBoard,
+      setBoardUi,
+      markPieces,
+    }
+    // random(ui)
+
+    // console.log('systematic')
+    // systematic(ui)
+    console.log('systematic2')
+    systematic2(ui)
+  }, [])
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        background: '#FFFCF3',
+        borderRadius: '10px',
+        width: `${PIECE_WIDTH * 7 + PIECE_MARGIN_PX * 6}px`,
+        height: `${PIECE_WIDTH * 7 + PIECE_MARGIN_PX * 6}px`,
+        padding: `${PIECE_MARGIN_PX}px`,
+        border: '5px solid #CDC5AB',
+      }}
+    >
+      {board.map((row, y) => {
+        return (
+          <React.Fragment key={y}>
+            {row.map((piece, x) => {
+              const style: React.CSSProperties = {
+                ...boardUi[y][x],
+                position: 'absolute',
+                top: `${
+                  PIECE_MARGIN_PX + y * (PIECE_WIDTH + PIECE_MARGIN_PX)
+                }px`,
+                left: `${
+                  PIECE_MARGIN_PX + x * (PIECE_WIDTH + PIECE_MARGIN_PX)
+                }px`,
+              }
+
+              if (!piece) {
+                return (
+                  <EmptyPiece
+                    key={`${y}-${x}`}
+                    style={style}
+                    position={{ x, y }}
+                  />
+                )
+              }
+
+              return (
+                <Piece
+                  key={`${y}-${x}-${piece.type}-${piece.rotation}`}
+                  style={style}
+                  {...piece}
+                />
+              )
+            })}
+          </React.Fragment>
+        )
+      })}
+    </div>
+  )
+}

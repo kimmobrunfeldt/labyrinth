@@ -1,156 +1,16 @@
-import _ from 'lodash'
-import React, { useEffect, useRef, useState } from 'react'
-import BoardComponent from 'src/components/Board'
-import PieceComponent from 'src/components/Piece'
-import { getPushPosition } from 'src/core/board'
-import { createBot } from 'src/core/bots/random'
-import { createLocalPlayer } from 'src/core/createLocalPlayer'
-import { createGameLoop } from 'src/core/gameLoop'
-import {
-  Game,
-  PieceOnBoard,
-  PlayerColor,
-  Position,
-  type Board,
-} from 'src/core/types'
+import React from 'react'
+import ClientGame from 'src/components/ClientGame'
+import HostGame from 'src/components/HostGame'
 import './App.css'
 
-class EventEmitter extends EventTarget {
-  dispatch(eventType: string, meta: Record<string, unknown> = {}) {
-    this.dispatchEvent(Object.assign(new Event(eventType), meta))
-  }
-}
-
 export const App = () => {
-  const [gameLoop, setGameLoop] = useState<Awaited<
-    ReturnType<typeof createGameLoop>
-  > | null>(null)
-  const [board, setBoard] = useState<Board | null>(null)
-  const [boardPiecesStyles, setBoardPiecesStyles] = useState<
-    React.CSSProperties[][] | null
-  >(null)
+  const maybeServerId = window.location.hash.slice(1)
+  const serverId = maybeServerId === '' ? undefined : maybeServerId
 
-  const emitter = useRef(new EventEmitter())
-
-  useEffect(() => {
-    async function init() {
-      const onGameChange = (game: Game) => setBoard({ ...game.board })
-      const gameLoop = await createGameLoop({
-        onStateChange: onGameChange,
-        cardsPerPlayer: 1,
-      })
-      setGameLoop(gameLoop)
-      await gameLoop.addPlayer(
-        {
-          name: 'Host',
-          color: PlayerColor.Blue,
-        },
-        createLocalPlayer({
-          askForMove: async () => {
-            const pos = await new Promise((resolve) => {
-              emitter.current.addEventListener(
-                'onClickPiece',
-                _.once((e) => {
-                  resolve(e.piece.position)
-                })
-              )
-            })
-
-            return pos as Position
-          },
-
-          askForPush: async () => {
-            const pos = await new Promise((resolve) => {
-              emitter.current.addEventListener(
-                'onClickPiece',
-                _.once((e) => {
-                  resolve(e.piece.position)
-                })
-              )
-            })
-
-            return {
-              position: getPushPosition(pos as Position),
-              rotation: 0,
-            }
-          },
-        })
-      )
-
-      await gameLoop.addPlayer(
-        {
-          name: 'Bot',
-          color: PlayerColor.Red,
-        },
-        createBot
-      )
-
-      const gameState = gameLoop.getState()
-      setBoard(gameState.board)
-      setBoardPiecesStyles(
-        gameState.board.pieces.map((row) => row.map(() => ({ opacity: 1 })))
-      )
-
-      gameLoop.start()
-      while (gameLoop.getState().stage !== 'finished') {
-        console.log('game loop')
-        await gameLoop.turn()
-      }
-      console.log('game finished!')
-      console.log(
-        'winners',
-        gameLoop.getState().winners.map((w) => w.name)
-      )
-    }
-
-    init()
-  }, [])
-
-  function markPieces(pieces: PieceOnBoard[]) {
-    if (!boardPiecesStyles) {
-      return
-    }
-
-    const newStyles = _.cloneDeep(boardPiecesStyles).map((row) =>
-      row.map(() => ({ opacity: 0.2 }))
-    )
-    const marked = newStyles.map((row, y) =>
-      row.map((p1, x) => {
-        const shouldMark = pieces.some(
-          (p2) => p2.position.x === x && p2.position.y === y
-        )
-        return shouldMark ? { opacity: 1 } : newStyles[y][x]
-      })
-    )
-    setBoardPiecesStyles(marked)
+  if (serverId) {
+    return <ClientGame serverPeerId={serverId} />
   }
-
-  function onClickPiece(piece: PieceOnBoard) {
-    // todo: update react ui
-    emitter.current.dispatch('onClickPiece', { piece })
-  }
-
-  return (
-    <div
-      className="App"
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-      }}
-    >
-      {gameLoop && board && boardPiecesStyles && (
-        <BoardComponent
-          players={gameLoop.getState().players}
-          board={board}
-          boardPiecesStyles={boardPiecesStyles}
-          onClickPiece={onClickPiece}
-        />
-      )}
-      {gameLoop && (
-        <PieceComponent style={{}} piece={gameLoop.getState().pieceBag[0]} />
-      )}
-    </div>
-  )
+  return <HostGame />
 }
+
 export default App
