@@ -146,7 +146,9 @@ export function createGame(opts: CreateGameOptions) {
 
   const removePlayer = mutator((id: string) => {
     const game = stageGuard(['setup'])
+    const player = getPlayerById(id)
     game.players = game.players.filter((p) => p.id !== id)
+    game.playerColors.push(player.color)
   })
 
   const pushByPlayer = mutator((playerId: string, pushPos: t.PushPosition) => {
