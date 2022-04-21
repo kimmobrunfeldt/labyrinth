@@ -5,14 +5,14 @@ import Piece, {
   PIECE_MARGIN_PX,
   PIECE_WIDTH,
 } from 'src/components/Piece'
-import { ClientGameState, PieceOnBoard, type Board } from 'src/core/types'
+import { CensoredPieceOnBoard, ClientGameState } from 'src/core/types'
 
 export type Props = {
-  board: Board
+  board: ClientGameState['board']
   players: ClientGameState['players']
   // Additional styles for each piece
   boardPiecesStyles?: React.CSSProperties[][]
-  onClickPiece: (piece: PieceOnBoard) => void
+  onClickPiece: (piece: CensoredPieceOnBoard) => void
 }
 
 const BoardComponent = ({ board, onClickPiece, boardPiecesStyles }: Props) => {

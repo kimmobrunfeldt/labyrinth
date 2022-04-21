@@ -42,7 +42,7 @@ export async function createServer(
     await Promise.all(
       Object.keys(players).map((playerId) => {
         const clientGameState = getStateForPlayer(playerId)
-        players[playerId as keyof typeof players].client.onStateChange(
+        return players[playerId as keyof typeof players].client.onStateChange(
           clientGameState
         )
       })
@@ -64,9 +64,23 @@ export async function createServer(
       }
     }
 
-    const { cards: _allGameCards, ...state } = game.getState()
+    const { cards: _allGameCards, board, ...state } = game.getState()
     return {
       ...state,
+      board: {
+        pieces: board.pieces.map((row) =>
+          row.map((p) => {
+            if (!p) {
+              return p
+            }
+            const { players, ...rest } = p
+            return {
+              ...rest,
+              players: players.map(censorPlayer),
+            }
+          })
+        ),
+      },
       players: state.players.map(censorPlayer),
       me: censorPlayer(game.getPlayerById(playerId)),
       myCurrentCards: game.getPlayersCurrentCards(playerId),

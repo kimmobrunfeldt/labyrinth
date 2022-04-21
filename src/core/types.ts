@@ -22,7 +22,10 @@ export type PlayerRpcAPI = {
   getMove: () => Position
 }
 
-export type ClientGameState = Omit<Game, 'cards' | 'players'> & {
+export type ClientGameState = Omit<Game, 'board' | 'cards' | 'players'> & {
+  board: Omit<Board, 'pieces'> & {
+    pieces: Array<Array<CensoredPieceOnBoard | null>>
+  }
   players: Array<CensoredPlayer>
   me: CensoredPlayer
   myCurrentCards: Card[]
@@ -102,6 +105,10 @@ export type ConnectedPieces = PieceOnBoard[]
 export type PieceOnBoard = Omit<Piece, 'position'> & {
   position: Position
   players: Player[]
+}
+export type CensoredPieceOnBoard = Omit<Piece, 'position'> & {
+  position: Position
+  players: CensoredPlayer[]
 }
 export type NeighborPiece = {
   piece: PieceOnBoard

@@ -7,7 +7,7 @@ import { getNewRotation, getPushPosition } from 'src/core/board'
 import { createClient } from 'src/core/client'
 import { getKey, saveKey } from 'src/core/sessionStorage'
 import * as t from 'src/core/types'
-import { ClientGameState, PieceOnBoard, Position } from 'src/core/types'
+import { ClientGameState, Position } from 'src/core/types'
 import { EventEmitter, uuid } from 'src/core/utils'
 import './App.css'
 
@@ -66,7 +66,7 @@ export const GameClient = ({ serverPeerId, adminToken }: Props) => {
     init()
   }, [])
 
-  function onClickPiece(piece: PieceOnBoard) {
+  function onClickPiece(piece: t.CensoredPieceOnBoard) {
     // todo: update react ui
     emitter.current.dispatch('onClickPiece', { piece })
   }
