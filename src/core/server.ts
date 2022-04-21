@@ -163,7 +163,7 @@ export async function createServer(
             transport: new PeerJsTransportClient({ peerConnection: conn }),
           })
           try {
-            if (!('playerId' in players)) {
+            if (!(playerId in players)) {
               game.addPlayer({ id: playerId })
             }
           } catch (err) {
@@ -183,7 +183,7 @@ export async function createServer(
         conn.on('close', () => {
           // XXX: Memory-leak sensitive
           console.log('Client connection closed')
-          if ('playerId' in players) {
+          if (playerId in players) {
             if (game.getState().stage !== 'setup') {
               players[playerId].status = 'disconnected'
             } else {
