@@ -5,7 +5,7 @@ import tShape from 'src/assets/t-shape.svg'
 import { Piece, PieceOnBoard, Type } from 'src/core/types'
 
 export const PIECE_MARGIN_PX = 2
-export const PIECE_WIDTH = 70
+export const PIECE_WIDTH = 50
 
 const pieceToSvg: Record<Type, string> = {
   straight: straight,
