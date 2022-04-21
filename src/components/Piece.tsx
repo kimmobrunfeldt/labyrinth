@@ -5,7 +5,7 @@ import tShape from 'src/assets/t-shape.svg'
 import { Piece, PieceOnBoard, Type } from 'src/core/types'
 
 export const PIECE_MARGIN_PX = 2
-export const PIECE_WIDTH = 80
+export const PIECE_WIDTH = 70
 
 const pieceToSvg: Record<Type, string> = {
   straight: straight,
@@ -23,15 +23,18 @@ export const STYLES = {
   overflow: 'hidden',
 }
 
-const PieceComponent = ({
+function PieceComponent<T extends Piece | PieceOnBoard>({
   piece,
   style,
+  onClick,
 }: {
-  piece: Piece | PieceOnBoard
+  piece: T
   style: React.CSSProperties
-}) => {
+  onClick?: (piece: T) => void
+}) {
   return (
     <div
+      onClick={() => onClick && onClick(piece)}
       style={{
         ...STYLES,
         // transform: `rotate(${Math.random() * 1.5}deg)`,

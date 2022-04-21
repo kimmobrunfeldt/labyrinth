@@ -12,16 +12,11 @@ import {
   createPieceBag,
 } from 'src/core/pieces'
 import * as t from 'src/core/types'
+import { format } from 'src/core/utils'
 
 export type CreateGameOptions = {
   onStateChange?: (game: t.Game) => void
   cardsPerPlayer?: number
-}
-
-export const format = {
-  pos: (pos: t.Position) => {
-    return `[${pos.x}, ${pos.y}]`
-  },
 }
 
 export function createGame(opts: CreateGameOptions) {
@@ -36,6 +31,12 @@ export function createGame(opts: CreateGameOptions) {
     board: {
       pieces: createInitialBoardPieces(),
     },
+    playerColors: [
+      t.PlayerColor.Blue,
+      t.PlayerColor.Red,
+      t.PlayerColor.Orange,
+      t.PlayerColor.Purple,
+    ],
     players: [],
     playerWhoStarted: 0,
     playerTurn: 0,
@@ -76,7 +77,7 @@ export function createGame(opts: CreateGameOptions) {
       finish()
       return
     }
-    console.log('increase player turn', game.players.length)
+
     game.playerTurn += 1
     if (game.playerTurn >= game.players.length) {
       game.playerTurn = 0
@@ -120,20 +121,28 @@ export function createGame(opts: CreateGameOptions) {
     game.winners = winners as t.NonEmptyArray<t.Player>
   })
 
-  const addPlayer = mutator((player: Pick<t.Player, 'name' | 'color'>) => {
-    const game = stageGuard(['setup'])
+  const addPlayer = mutator(
+    (player: Pick<t.Player, 'id'> & { name?: string }) => {
+      const game = stageGuard([
+        'setup',
+        'playing',
+        'finished' /* todo: remove other stages*/,
+      ])
 
-    if (game.players.length >= 4) {
-      throw new Error('Max 4 players can play')
+      if (game.players.length >= 4 || gameState.playerColors.length === 0) {
+        throw new Error('Max players already joined')
+      }
+
+      const p = player as t.Player
+      p.cards = _.times(cardsPerPlayer).map(() =>
+        assertDefined(gameState.cards.pop())
+      )
+      p.color = assertDefined(gameState.playerColors.pop())
+      p.name = player.name ?? `Player ${game.players.length + 1}`
+      game.players.push(p)
+      return p.id
     }
-
-    const p = player as t.Player
-    p.cards = _.times(cardsPerPlayer).map(() => assertDefined(deck.pop()))
-    p.id = _.uniqueId('player')
-    game.players.push(p)
-
-    return p.id
-  })
+  )
 
   const removePlayer = mutator((id: string) => {
     const game = stageGuard(['setup'])
@@ -189,8 +198,29 @@ export function createGame(opts: CreateGameOptions) {
       setPlayerPosition(playerId, moveTo)
     }
 
-    maybeUpdateCardFound(playerById(playerId))
+    maybeUpdateCardFound(getPlayerById(playerId))
     nextTurn()
+  })
+
+  const setExtraPieceRotationByPlayer = mutator(
+    (playerId: string, rotation: t.Rotation) => {
+      const game = stageGuard(['playing'])
+
+      if (![0, 90, 180, 270].includes(rotation)) {
+        throw new Error(`Invalid rotation: ${rotation}`)
+      }
+
+      if (!isPlayersTurn(playerId)) {
+        throw new Error(`It's not ${playerId}'s turn`)
+      }
+
+      game.pieceBag[0].rotation = rotation
+    }
+  )
+
+  const setNameByPlayer = mutator((playerId: string, name: string) => {
+    const index = playerIndexById(playerId)
+    gameState.players[index].name = name
   })
 
   const maybeUpdateCardFound = mutator((player: t.Player) => {
@@ -230,14 +260,14 @@ export function createGame(opts: CreateGameOptions) {
     }
 
     const newPiece = getPieceAt(game.board, newPos)
-    newPiece.players.push(playerById(playerId))
+    newPiece.players.push(getPlayerById(playerId))
   }
 
   function playerIndexById(playerId: string): number {
     return _.findIndex(gameState.players, (p) => p.id === playerId)
   }
 
-  function playerById(playerId: string): t.Player {
+  function getPlayerById(playerId: string): t.Player {
     const found = _.find(gameState.players, (p) => p.id === playerId)
     if (!found) {
       throw new Error(`Player not found with id '${playerId}'`)
@@ -257,6 +287,10 @@ export function createGame(opts: CreateGameOptions) {
     })
   }
 
+  function getExtraPieceRotation(): t.Rotation {
+    return gameState.pieceBag[0].rotation
+  }
+
   function whosTurn(): t.Player {
     return gameState.players[gameState.playerTurn]
   }
@@ -265,13 +299,18 @@ export function createGame(opts: CreateGameOptions) {
     getState: () => gameState as t.Game,
     start,
     addPlayer,
+    getPlayerById,
     removePlayer,
     pushByPlayer,
     moveByPlayer,
+    nextTurn,
     whosTurn,
     getPlayerPosition,
     getPlayersCurrentCards: (playerId: string) =>
-      getPlayersCurrentCards(playerById(playerId)),
+      getPlayersCurrentCards(getPlayerById(playerId)),
+    getExtraPieceRotation,
+    setExtraPieceRotationByPlayer,
+    setNameByPlayer,
   }
 }
 

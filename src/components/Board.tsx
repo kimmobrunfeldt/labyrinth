@@ -5,13 +5,13 @@ import Piece, {
   PIECE_MARGIN_PX,
   PIECE_WIDTH,
 } from 'src/components/Piece'
-import { PieceOnBoard, Player, type Board } from 'src/core/types'
+import { ClientGameState, PieceOnBoard, type Board } from 'src/core/types'
 
 export type Props = {
   board: Board
-  players: Player[]
+  players: ClientGameState['players']
   // Additional styles for each piece
-  boardPiecesStyles: React.CSSProperties[][]
+  boardPiecesStyles?: React.CSSProperties[][]
   onClickPiece: (piece: PieceOnBoard) => void
 }
 
@@ -20,7 +20,7 @@ const BoardComponent = ({ board, onClickPiece, boardPiecesStyles }: Props) => {
     board.pieces.map((row, y) =>
       row.map((piece, x) => {
         const style: React.CSSProperties = {
-          ...boardPiecesStyles[y][x],
+          ...(boardPiecesStyles?.[y]?.[x] || {}),
           position: 'absolute',
           top: `${PIECE_MARGIN_PX + y * (PIECE_WIDTH + PIECE_MARGIN_PX)}px`,
           left: `${PIECE_MARGIN_PX + x * (PIECE_WIDTH + PIECE_MARGIN_PX)}px`,

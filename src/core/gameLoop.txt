@@ -10,7 +10,7 @@ export async function createGameLoop(gameOpts: CreateGameOptions) {
 
   const controlledPlayers: Record<string, t.ControlledPlayer> = {}
 
-  // TODO: implement skip
+  // TODO: implement turn skip on timeout
   async function loopUntilSuccess<ArgsT>(
     fn: () => Promise<void>,
     errCb?: (err: Error, ...args: ArgsT[]) => void
@@ -23,7 +23,6 @@ export async function createGameLoop(gameOpts: CreateGameOptions) {
         if (errCb) {
           errCb(e as Error)
         }
-        await new Promise((resolve) => setTimeout(resolve, 500))
         continue
       }
     }
@@ -42,17 +41,6 @@ export async function createGameLoop(gameOpts: CreateGameOptions) {
   async function start() {
     game.start()
     await sendStateToEveryone()
-  }
-
-  async function addPlayer(
-    info: Pick<t.Player, 'name' | 'color'>,
-    createPlayer: (server: t.Server) => t.ControlledPlayer
-  ) {
-    const id = game.addPlayer(info)
-    controlledPlayers[id] = createPlayer({
-      getMyPosition: () => game.getPlayerPosition(id),
-      getMyCurrentCards: () => game.getPlayersCurrentCards(id),
-    })
   }
 
   async function turn() {
@@ -100,12 +88,17 @@ export async function createGameLoop(gameOpts: CreateGameOptions) {
   }
 
   return {
-    turn,
-    getState: game.getState,
-    start,
-    addPlayer,
-    publicMethods: {
+    internal: {
+      addPlayer: game.addPlayer,
+    },
+    public: {
       getPublicState,
+      getMyPosition: () => ({ x: 0, y: 0 }),
+      setMyDetails: ({ name }: Pick<t.Player, 'name'>) => undefined,
+    },
+    publicAdmin: {
+      getState: game.getState,
+      start,
     },
   }
 }

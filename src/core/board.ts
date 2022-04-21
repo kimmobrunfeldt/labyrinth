@@ -1,5 +1,4 @@
 import _ from 'lodash'
-import { format } from 'src/core/game'
 import { createPieceBag } from 'src/core/pieces'
 import {
   Board,
@@ -17,6 +16,7 @@ import {
   Type,
   WalkableDirections,
 } from 'src/core/types'
+import { format } from 'src/core/utils'
 
 type FillBoardOptions = {
   maxFillPieces?: number
@@ -429,7 +429,7 @@ export function randomFreePieceToRotate(subgraphs: ConnectedPieces[]) {
   return sampleNormalDistricution(freePieces)
 }
 
-export function rotatePiece(
+export function rotatePieceOnBoard(
   board: Board,
   pos: Position,
   direction: -90 | 90 = +90
@@ -443,14 +443,18 @@ export function rotatePiece(
     throw new Error(`Unable to rotate: no piece at [${pos.x}, ${pos.y}]`)
   }
 
-  let newRotation = (piece.rotation + direction) as Rotation
+  piece.rotation = getNewRotation(piece.rotation, direction)
+}
+
+export function getNewRotation(current: Rotation, direction: -90 | 90 = +90) {
+  let newRotation = (current + direction) as Rotation
   if (newRotation > 270) {
     newRotation = 0
   }
   if (newRotation < 0) {
     newRotation = 270
   }
-  piece.rotation = newRotation
+  return newRotation
 }
 
 export function findConnected(
@@ -487,7 +491,11 @@ export function isValidPlayerMove(
 ): boolean {
   const piece = getPieceAt(board, fromPos)
   const connected = findConnected(board, new Set<PieceOnBoard>([piece]))
-  return connected.findIndex((c) => c.position === toPos) !== -1
+  return (
+    connected.findIndex(
+      (c) => c.position.x === toPos.x && c.position.y === toPos.y
+    ) !== -1
+  )
 }
 
 const pieceToOpenDirections: Record<

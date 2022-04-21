@@ -5,31 +5,32 @@ export type PlayerUI = {
   askForMove: () => Promise<Position>
 }
 
-// TODO: Separate public and private state
-export type Server = {
+export type ServerRpcAPI = {
+  getState: () => ClientGameState
   getMyPosition: () => Position
   getMyCurrentCards: () => Card[]
-
-  // TODO: implement
-  setExtraPieceRotation?: (rotation: Rotation) => Promise<void>
-  setMyName?: (name: string) => Promise<void>
+  setExtraPieceRotation: (rotation: Rotation) => void
+  setMyName: (name: string) => void
+} & {
+  // Admin API
+  start: (adminToken: string) => void
 }
 
-export type ControlledPlayer = {
-  onStateChange: (gameState: Game) => Promise<void>
-  getPush: () => Promise<{
-    position: PushPosition
-    rotation: Rotation
-  }>
-  getMove: () => Promise<Position>
+export type PlayerRpcAPI = {
+  onStateChange: (gameState: ClientGameState) => void
+  getPush: () => PushPosition
+  getMove: () => Position
 }
 
-export type PublicGame = Omit<Game, 'cards' | 'players'> & {
-  players: Array<Omit<Player, 'cards'> & { currentCards: Card[] }>
+export type ClientGameState = Omit<Game, 'cards' | 'players'> & {
+  players: Array<CensoredPlayer>
+  me: CensoredPlayer
+  myCurrentCards: Card[]
 }
 
 // Game
 export type GameCommonProperties = {
+  playerColors: PlayerColor[]
   players: Player[]
   cards: Card[]
   playerHasPushed: boolean
@@ -67,6 +68,10 @@ export type Player = {
   color: PlayerColor
   cards: Card[]
 }
+export type CensoredPlayer = Omit<Player, 'cards'> & {
+  currentCards: Card[]
+  censoredCards: CensoredCard[]
+}
 export type Host = {
   playerId: Player['id']
 }
@@ -74,7 +79,7 @@ export enum PlayerColor {
   Red = '#EB5757',
   Orange = '#F2994A',
   Blue = '#2F80ED',
-  Violet = '#9B51E0',
+  Purple = '#9B51E0',
 }
 
 // Board
@@ -144,6 +149,14 @@ export type Card = {
   trophy: Trophy
   found: boolean
 }
+export type CensoredCard =
+  | {
+      trophy: Trophy
+      found: true
+    }
+  | {
+      found: false
+    }
 
 // Utils
 
@@ -159,3 +172,9 @@ export type NonStrictParameters<F> = F extends (...args: unknown[]) => unknown
 export type NonStrictReturnType<F> = F extends (...args: unknown[]) => unknown
   ? ReturnType<F>
   : never
+
+export type PromisifyMethods<
+  T extends { [key: string]: (...args: any[]) => any }
+> = {
+  [K in keyof T]: (...args: Parameters<T[K]>) => Promise<ReturnType<T[K]>>
+}

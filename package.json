@@ -46,6 +46,7 @@
     ]
   },
   "devDependencies": {
-    "eslint-plugin-prettier": "^4.0.0"
+    "eslint-plugin-prettier": "^4.0.0",
+    "ts-node": "^10.7.0"
   }
 }

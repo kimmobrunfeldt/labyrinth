@@ -1,7 +1,7 @@
 import * as t from 'src/core/types'
 
 export function createLocalPlayer(ui: t.PlayerUI) {
-  return (server: t.Server) => {
+  return (server: t.ServerRpcAPI) => {
     let gameState: t.GamePlaying | t.GameFinished
 
     return {
