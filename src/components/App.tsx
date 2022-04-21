@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import GameClient from 'src/components/GameClient'
+import { createBot } from 'src/core/bots/random'
 import { createServer } from 'src/core/server'
+import { getRandomAdminToken } from 'src/core/utils'
 import './App.css'
 
 export const App = () => {
@@ -17,6 +19,8 @@ export const App = () => {
         // Launch server
         const server = await createServer({ cardsPerPlayer: 2 })
         setServer(server)
+
+        await createBot(`bot-${getRandomAdminToken()}`, server)
       } else {
         setServer({
           peerId: serverPeerId,

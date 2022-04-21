@@ -84,6 +84,10 @@ export async function createServer(
       players: state.players.map(censorPlayer),
       me: censorPlayer(game.getPlayerById(playerId)),
       myCurrentCards: game.getPlayersCurrentCards(playerId),
+      myPosition:
+        game.getState().stage === 'setup'
+          ? undefined
+          : game.getPlayerPosition(playerId),
     }
   }
 

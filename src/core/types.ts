@@ -29,6 +29,7 @@ export type ClientGameState = Omit<Game, 'board' | 'cards' | 'players'> & {
   players: Array<CensoredPlayer>
   me: CensoredPlayer
   myCurrentCards: Card[]
+  myPosition?: Position
 }
 
 // Game
