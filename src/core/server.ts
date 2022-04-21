@@ -163,7 +163,9 @@ export async function createServer(
             transport: new PeerJsTransportClient({ peerConnection: conn }),
           })
           try {
-            game.addPlayer({ id: playerId })
+            if (!('playerId' in players)) {
+              game.addPlayer({ id: playerId })
+            }
           } catch (err) {
             // Close connection max players joined
             console.warn('Client join failed:', err)
