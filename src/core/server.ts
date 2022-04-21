@@ -182,7 +182,12 @@ export async function createServer(
           // XXX: Memory-leak sensitive
           console.log('Client connection closed')
           if ('playerId' in players) {
-            players[playerId].status = 'disconnected'
+            if (game.getState().stage !== 'setup') {
+              players[playerId].status = 'disconnected'
+            } else {
+              delete players[playerId]
+              game.removePlayer(playerId)
+            }
           }
         })
       })
