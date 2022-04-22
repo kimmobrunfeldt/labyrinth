@@ -1,9 +1,10 @@
 import _ from 'lodash'
 import React, { useEffect, useRef, useState } from 'react'
-import AdminPanel from 'src/components/AdminPanel'
+import AdminPanel, { Props as AdminPanelProps } from 'src/components/AdminPanel'
 import BoardComponent from 'src/components/Board'
 import PieceComponent from 'src/components/Piece'
 import { getNewRotation, getPushPosition } from 'src/core/board'
+import { createBot } from 'src/core/bots/random'
 import { createClient } from 'src/core/client'
 import { getKey, saveKey } from 'src/core/sessionStorage'
 import * as t from 'src/core/types'
@@ -15,7 +16,44 @@ type Props = {
   serverPeerId: string
   adminToken?: string
 }
-export const GameClient = ({ serverPeerId, adminToken }: Props) => {
+
+function Container({
+  children,
+  adminToken,
+  gameState,
+  onStartGameClick,
+  onAddBotClick,
+}: React.PropsWithChildren<
+  Props & {
+    gameState?: ClientGameState
+  } & Omit<AdminPanelProps, 'startGameDisabled'>
+>) {
+  return (
+    <div
+      className="GameClient"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingTop: '5vh',
+      }}
+    >
+      {adminToken && (
+        <AdminPanel
+          startGameDisabled={Boolean(gameState && gameState.stage !== 'setup')}
+          onStartGameClick={onStartGameClick}
+          onAddBotClick={onAddBotClick}
+        />
+      )}
+      {children}
+    </div>
+  )
+}
+
+export const GameClient = (props: Props) => {
+  const { serverPeerId, adminToken } = props
+
   const [error, setError] = useState<Error | undefined>(undefined)
   const [client, setClient] = useState<
     t.PromisifyMethods<t.ServerRpcAPI> | undefined
@@ -23,6 +61,7 @@ export const GameClient = ({ serverPeerId, adminToken }: Props) => {
   const [gameState, setGameState] = useState<ClientGameState | undefined>(
     undefined
   )
+  const bots = useRef<Array<t.PromisifyMethods<t.ServerRpcAPI>>>([])
   const emitter = useRef(new EventEmitter())
 
   useEffect(() => {
@@ -60,9 +99,9 @@ export const GameClient = ({ serverPeerId, adminToken }: Props) => {
         getPush: async () => {
           const pos = await new Promise((resolve) => {
             emitter.current.addEventListener(
-              'onClickPiece',
-              _.once((e) => {
-                resolve(e.piece.position)
+              'onClickPushPosition',
+              _.once((pos) => {
+                resolve(pos)
               })
             )
           })
@@ -76,13 +115,21 @@ export const GameClient = ({ serverPeerId, adminToken }: Props) => {
     init()
   }, [])
 
+  async function onAddBot() {
+    bots.current.push(
+      await createBot(`bot-${uuid()}`, { peerId: serverPeerId })
+    )
+  }
+
   function onClickPiece(piece: t.CensoredPieceOnBoard) {
-    // todo: update react ui
     emitter.current.dispatch('onClickPiece', { piece })
   }
 
+  function onClickPushPosition(position: t.Position) {
+    emitter.current.dispatch('onClickPushPosition', position)
+  }
+
   function onClickExtraPiece() {
-    // todo: update react ui
     if (!client || !gameState) {
       return
     }
@@ -92,49 +139,38 @@ export const GameClient = ({ serverPeerId, adminToken }: Props) => {
   }
 
   async function onStartGameClick() {
-    // todo: update react ui
     if (!client || !adminToken) {
       return
     }
     await client.start(adminToken)
   }
 
-  function Container({ children }: { children: React.ReactNode }) {
-    return (
-      <div
-        className="GameClient"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          paddingTop: '5vh',
-        }}
-      >
-        {children}
-      </div>
-    )
+  const containerProps = {
+    ...props,
+    gameState,
+    onStartGameClick,
+    onAddBotClick: onAddBot,
   }
 
   if (error) {
-    return <Container>Error: {error.message}</Container>
+    return <Container {...containerProps}>Error: {error.message}</Container>
   }
 
   if (!gameState) {
     const message = adminToken
       ? 'Starting the server ...'
       : `Connecting to ${serverPeerId} ...`
-    return <Container>{message}</Container>
+    return <Container {...containerProps}>{message}</Container>
   }
 
   return (
-    <Container>
-      {adminToken && <AdminPanel onStartGameClick={onStartGameClick} />}
+    <Container {...containerProps}>
       {gameState && (
         <BoardComponent
           players={gameState.players}
           board={gameState.board}
           onClickPiece={onClickPiece}
+          onClickPushPosition={onClickPushPosition}
         />
       )}
       {gameState && (

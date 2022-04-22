@@ -28,9 +28,8 @@ const StartPage = ({ onHostGame, onJoinGame }: Props) => {
       <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
         <h1 style={{ fontSize: '3.5rem', marginBottom: '2rem' }}>Labyrinth</h1>
         <p style={{ maxWidth: '300px' }}>
-          Online version of the Labyrinth board game. Networking is
-          peer-to-peer, meaning the game server will run on the host&apos;s
-          browser.
+          Online version of the Labyrinth board game. The game server will run
+          on the host&apos;s browser and networking happens peer-to-peer.
         </p>
       </div>
 
@@ -41,7 +40,6 @@ const StartPage = ({ onHostGame, onJoinGame }: Props) => {
             flexDirection: 'column',
             marginRight: '15px',
             maxWidth: '150px',
-            //justifyContent: 'center',
           }}
         >
           <button className="button-50" onClick={onHostGame}>
@@ -66,7 +64,6 @@ const StartPage = ({ onHostGame, onJoinGame }: Props) => {
             flexDirection: 'column',
             marginRight: '15px',
             maxWidth: '150px',
-            //justifyContent: 'center',
           }}
         >
           <button className="button-50" onClick={onJoinClick}>

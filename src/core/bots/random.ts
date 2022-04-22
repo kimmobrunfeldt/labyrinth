@@ -52,4 +52,5 @@ export async function createBot(
 
   gameState = await client.getState()
   await client.setMyName('Random bot')
+  return client
 }

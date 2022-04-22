@@ -5,7 +5,11 @@ import Piece, {
   PIECE_MARGIN_PX,
   PIECE_WIDTH,
 } from 'src/components/Piece'
-import { CensoredPieceOnBoard, ClientGameState } from 'src/core/types'
+import {
+  CensoredPieceOnBoard,
+  ClientGameState,
+  PushPosition,
+} from 'src/core/types'
 
 export type Props = {
   board: ClientGameState['board']
@@ -13,9 +17,15 @@ export type Props = {
   // Additional styles for each piece
   boardPiecesStyles?: React.CSSProperties[][]
   onClickPiece: (piece: CensoredPieceOnBoard) => void
+  onClickPushPosition: (position: PushPosition) => void
 }
 
-const BoardComponent = ({ board, onClickPiece, boardPiecesStyles }: Props) => {
+const BoardComponent = ({
+  board,
+  onClickPiece,
+  onClickPushPosition,
+  boardPiecesStyles,
+}: Props) => {
   const piecesForRender = _.flatten(
     board.pieces.map((row, y) =>
       row.map((piece, x) => {
