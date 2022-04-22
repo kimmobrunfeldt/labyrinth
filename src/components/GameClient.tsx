@@ -16,6 +16,7 @@ type Props = {
   adminToken?: string
 }
 export const GameClient = ({ serverPeerId, adminToken }: Props) => {
+  const [error, setError] = useState<Error | undefined>(undefined)
   const [client, setClient] = useState<
     t.PromisifyMethods<t.ServerRpcAPI> | undefined
   >(undefined)
@@ -34,6 +35,15 @@ export const GameClient = ({ serverPeerId, adminToken }: Props) => {
       }
 
       const client = await createClient(playerId, serverPeerId, {
+        onPeerError: (err) => {
+          setError(err)
+        },
+        onPeerConnectionClose: () => {
+          setError(new Error('Game server disconnected'))
+        },
+        onPeerConnectionError: (err) => {
+          setError(err)
+        },
         onStateChange: async (state) => setGameState(state),
         getMove: async () => {
           const pos = await new Promise((resolve) => {
@@ -89,16 +99,36 @@ export const GameClient = ({ serverPeerId, adminToken }: Props) => {
     await client.start(adminToken)
   }
 
+  function Container({ children }: { children: React.ReactNode }) {
+    return (
+      <div
+        className="GameClient"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingTop: '5vh',
+        }}
+      >
+        {children}
+      </div>
+    )
+  }
+
+  if (error) {
+    return <Container>Error: {error.message}</Container>
+  }
+
+  if (!gameState) {
+    const message = adminToken
+      ? 'Starting the server ...'
+      : `Connecting to ${serverPeerId} ...`
+    return <Container>{message}</Container>
+  }
+
   return (
-    <div
-      className="GameClient"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-      }}
-    >
+    <Container>
       {adminToken && <AdminPanel onStartGameClick={onStartGameClick} />}
       {gameState && (
         <BoardComponent
@@ -158,7 +188,7 @@ export const GameClient = ({ serverPeerId, adminToken }: Props) => {
           })}
         </div>
       )}
-    </div>
+    </Container>
   )
 }
 

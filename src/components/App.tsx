@@ -1,38 +1,61 @@
 import React, { useEffect, useState } from 'react'
+import ConfirmLeave from 'src/components/ConfirmLeave'
 import GameClient from 'src/components/GameClient'
-import { createBot } from 'src/core/bots/random'
+import StartPage from 'src/components/StartPage'
 import { createServer } from 'src/core/server'
-import { getRandomAdminToken } from 'src/core/utils'
+import { getKey, saveKey } from 'src/core/sessionStorage'
+import { getRandomPeerId } from 'src/core/utils'
 import './App.css'
 
 export const App = () => {
   const [server, setServer] = useState<
-    { peerId: string; adminToken?: string } | undefined
+    { peerId: string; adminToken?: string; isServerHost: boolean } | undefined
   >(undefined)
 
   useEffect(() => {
-    async function init() {
-      const maybeServerId = window.location.hash.slice(1)
-      const serverPeerId = maybeServerId === '' ? undefined : maybeServerId
+    const maybeServerId = window.location.hash.slice(1)
+    const serverPeerId = maybeServerId === '' ? undefined : maybeServerId
 
-      if (!serverPeerId) {
-        // Launch server
-        const server = await createServer({ cardsPerPlayer: 2 })
-        setServer(server)
-
-        await createBot(`bot-${getRandomAdminToken()}`, server)
-      } else {
-        setServer({
-          peerId: serverPeerId,
-          adminToken: undefined,
-        })
-      }
+    if (serverPeerId) {
+      joinGame(serverPeerId)
     }
-    init()
-  }, [])
+  }, [setServer])
+
+  async function hostGame() {
+    // Make server id stable across page closes
+    let serverPeerId = getKey('serverPeerId')
+    if (!serverPeerId) {
+      serverPeerId = getRandomPeerId()
+      saveKey('serverPeerId', serverPeerId)
+    }
+
+    const server = await createServer({
+      peerId: serverPeerId,
+      cardsPerPlayer: 1,
+    })
+    setServer({ ...server, isServerHost: true })
+
+    // await createBot(`bot-${getRandomAdminToken()}`, server)
+  }
+
+  function joinGame(serverPeerId: string) {
+    setServer({
+      peerId: serverPeerId,
+      adminToken: undefined,
+      isServerHost: false,
+    })
+    window.location.hash = serverPeerId
+  }
 
   return (
     <div className="App">
+      {!server && <StartPage onHostGame={hostGame} onJoinGame={joinGame} />}
+      <ConfirmLeave
+        when={
+          Boolean(server?.isServerHost) &&
+          process.env.NODE_ENV !== 'development'
+        }
+      />
       {server && (
         <GameClient
           serverPeerId={server.peerId}

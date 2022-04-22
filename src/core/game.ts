@@ -239,7 +239,7 @@ export function createGame(opts: CreateGameOptions) {
   })
 
   function getPlayerPosition(playerId: string): t.Position {
-    const game = stageGuard(['playing'])
+    const game = stageGuard(['playing', 'finished'])
 
     const pieces = _.flatten(game.board.pieces)
     const piece = _.find(pieces, (p) =>
@@ -340,7 +340,7 @@ export function getPlayersBetweenCurrentAndPlayerWhoStarted(
  */
 function getPlayersCurrentCards(player: t.Player, max = 1): t.Card[] {
   const current: t.Card[] = []
-  for (let i = 0; player.cards.length; ++i) {
+  for (let i = 0; i < player.cards.length; ++i) {
     if (!player.cards[i].found) {
       current.push(player.cards[i])
       if (current.length >= max) {

@@ -8,10 +8,10 @@ import { PeerJsTransportServer } from 'src/core/TransportServer'
 import * as t from 'src/core/types'
 import {
   getRandomAdminToken,
-  getRandomPeerId,
   loopUntilSuccess,
   wrapWithLogging,
 } from 'src/core/utils'
+import { iceServers } from 'src/peerConfig'
 
 export type GameServer = {
   peerId: string
@@ -19,8 +19,9 @@ export type GameServer = {
 }
 
 export async function createServer(
-  gameOpts: CreateGameOptions = {}
+  opts: CreateGameOptions & { peerId?: string } = {}
 ): Promise<GameServer> {
+  const { peerId, ...gameOpts } = opts
   const game = createGame({ ...gameOpts, onStateChange: sendStateToEveryone })
   const adminToken = getRandomAdminToken()
   const players: Record<
@@ -32,9 +33,11 @@ export async function createServer(
     }
   > = {}
 
-  const peerId = getRandomPeerId()
-  const peer = new Peer('mouse-ghost-779', {
+  const peer = new Peer(peerId, {
     debug: 10,
+    config: {
+      iceServers,
+    },
   })
   peer.on('error', (err) => console.error(err))
 
@@ -148,7 +151,7 @@ export async function createServer(
 
   return new Promise((resolve) => {
     peer.on('open', (openPeerId) => {
-      console.log('Server open')
+      console.log('Server open with peer id', openPeerId)
 
       peer.on('connection', (conn) => {
         const playerId = conn.metadata.id

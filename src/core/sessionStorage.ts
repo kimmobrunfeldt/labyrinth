@@ -1,5 +1,6 @@
 export type Storage = {
   playerId: string
+  serverPeerId: string
 }
 
 function isSupported() {

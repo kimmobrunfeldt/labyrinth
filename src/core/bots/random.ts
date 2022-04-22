@@ -20,8 +20,12 @@ export async function createBot(
       gameState = state
     },
     getMove: async () => {
+      if (!gameState.myPosition) {
+        throw new Error('Unexpected getMove')
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 600))
-      const currentPos = gameState.myPosition!
+      const currentPos = gameState.myPosition
       const piece = getPieceAt(
         gameState.board as unknown as t.FilledBoard,
         currentPos

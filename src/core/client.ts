@@ -5,16 +5,36 @@ import { PeerJsTransportClient } from 'src/core/TransportClient'
 import { PeerJsTransportServer } from 'src/core/TransportServer'
 import * as t from 'src/core/types'
 import { wrapWithLogging } from 'src/core/utils'
+import { iceServers } from 'src/peerConfig'
+
+export type ClientProps = {
+  onPeerError?: (err: Error) => void
+  onPeerConnectionError?: (err: Error) => void
+  onPeerConnectionClose?: () => void
+}
 
 export async function createClient(
   playerId: string,
   serverPeerId: string,
-  { onStateChange, getMove, getPush }: t.PromisifyMethods<t.PlayerRpcAPI>
+  {
+    onStateChange,
+    getMove,
+    getPush,
+    onPeerError,
+    onPeerConnectionClose,
+    onPeerConnectionError,
+  }: t.PromisifyMethods<t.PlayerRpcAPI> & ClientProps
 ): Promise<t.PromisifyMethods<t.ServerRpcAPI>> {
   const peer = new Peer({
     // debug: 10,
+    config: {
+      iceServers,
+    },
   })
-  peer.on('error', (err) => console.error(err))
+  peer.on('error', (err) => {
+    console.error(err)
+    onPeerError && onPeerError(err)
+  })
 
   return new Promise((resolve) => {
     peer.on('open', () => {
@@ -49,8 +69,11 @@ export async function createClient(
         resolve(client)
       })
 
-      conn.on('close', () => console.log('conn close'))
-      conn.on('error', (err) => console.error(err))
+      conn.on('close', () => onPeerConnectionClose && onPeerConnectionClose())
+      conn.on(
+        'error',
+        (err) => onPeerConnectionError && onPeerConnectionError(err)
+      )
     })
   })
 }
