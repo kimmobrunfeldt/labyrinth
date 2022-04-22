@@ -36,7 +36,7 @@ function Container({
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        paddingTop: '5vh',
+        padding: '30px 15px',
       }}
     >
       {adminToken && (
@@ -123,6 +123,9 @@ export const GameClient = (props: Props) => {
 
   function onClickPiece(piece: t.CensoredPieceOnBoard) {
     emitter.current.dispatch('onClickPiece', { piece })
+
+    // TODO: remove
+    emitter.current.dispatch('onClickPushPosition', piece.position)
   }
 
   function onClickPushPosition(position: t.Position) {
