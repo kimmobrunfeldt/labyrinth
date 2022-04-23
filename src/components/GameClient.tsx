@@ -4,7 +4,7 @@ import AdminPanel, { Props as AdminPanelProps } from 'src/components/AdminPanel'
 import BoardComponent from 'src/components/Board'
 import PieceComponent from 'src/components/Piece'
 import { getNewRotation, getPushPosition } from 'src/core/board'
-import { createBot } from 'src/core/bots/random'
+import { connectBot } from 'src/core/bots/random'
 import { createClient } from 'src/core/client'
 import { getKey, saveKey } from 'src/core/sessionStorage'
 import * as t from 'src/core/types'
@@ -73,12 +73,21 @@ export const GameClient = (props: Props) => {
         saveKey('playerId', playerId)
       }
 
-      const client = await createClient(playerId, serverPeerId, {
+      createClient({
+        playerId,
+        serverPeerId,
+        onClientCreated: async (client) => {
+          setGameState(await client.getState())
+          setClient(client)
+        },
         onPeerError: (err) => {
           setError(err)
         },
         onPeerConnectionClose: () => {
           setError(new Error('Game server disconnected'))
+        },
+        onPeerConnectionOpen: () => {
+          setError(undefined)
         },
         onPeerConnectionError: (err) => {
           setError(err)
@@ -109,16 +118,12 @@ export const GameClient = (props: Props) => {
           return getPushPosition(pos as Position)
         },
       })
-      setGameState(await client.getState())
-      setClient(client)
     }
     init()
   }, [])
 
   async function onAddBot() {
-    bots.current.push(
-      await createBot(`bot-${uuid()}`, { peerId: serverPeerId })
-    )
+    connectBot(`bot-${uuid()}`, { peerId: serverPeerId })
   }
 
   function onClickPiece(piece: t.CensoredPieceOnBoard) {

@@ -9,13 +9,19 @@ import { createClient } from 'src/core/client'
 import { GameServer } from 'src/core/server'
 import * as t from 'src/core/types'
 
-export async function createBot(
+export function connectBot(
   playerId: string,
   server: Pick<GameServer, 'peerId'>
 ) {
   let gameState: t.ClientGameState
 
-  const client = await createClient(playerId, server.peerId, {
+  createClient({
+    playerId,
+    serverPeerId: server.peerId,
+    onClientCreated: async (client) => {
+      gameState = await client.getState()
+      await client.setMyName('Random bot')
+    },
     onStateChange: async (state) => {
       gameState = state
     },
@@ -45,12 +51,7 @@ export async function createBot(
     },
     getPush: async () => {
       await new Promise((resolve) => setTimeout(resolve, 1000))
-
       return assertDefined(_.sample(pushPositions))
     },
   })
-
-  gameState = await client.getState()
-  await client.setMyName('Random bot')
-  return client
 }

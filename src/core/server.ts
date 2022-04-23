@@ -33,11 +33,27 @@ export async function createServer(
     }
   > = {}
 
+  let peerConnected = false
   const peer = new Peer(peerId, {
     debug: 10,
     config: {
       iceServers,
     },
+  })
+
+  function reconnectPeerUntilConnected() {
+    if (peerConnected) {
+      return
+    }
+
+    console.log('Reconnecting server to peer ...')
+    peer.reconnect()
+    setTimeout(reconnectPeerUntilConnected, 5000)
+  }
+
+  peer.on('disconnected', () => {
+    peerConnected = false
+    reconnectPeerUntilConnected()
   })
   peer.on('error', (err) => console.error(err))
 
@@ -151,6 +167,7 @@ export async function createServer(
 
   return new Promise((resolve) => {
     peer.on('open', (openPeerId) => {
+      peerConnected = true
       console.log('Server open with peer id', openPeerId)
 
       peer.on('connection', (conn) => {
