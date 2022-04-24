@@ -21,6 +21,7 @@
     "mole-rpc-transport-eventemitter": "^1.0.1",
     "peerjs": "^1.3.2",
     "prettier": "^2.6.2",
+    "promise-retryify": "^1.0.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-scripts": "5.0.1",

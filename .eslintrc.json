@@ -35,6 +35,7 @@
         "varsIgnorePattern": "^_"
       }
     ],
-    "no-loop-func": "off"
+    "no-loop-func": "off",
+    "@typescript-eslint/no-explicit-any": "off"
   }
 }

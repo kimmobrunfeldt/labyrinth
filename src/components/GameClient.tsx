@@ -56,7 +56,7 @@ export const GameClient = (props: Props) => {
 
   const [error, setError] = useState<Error | undefined>(undefined)
   const [client, setClient] = useState<
-    t.PromisifyMethods<t.ServerRpcAPI> | undefined
+    Awaited<ReturnType<typeof createClient>> | undefined
   >(undefined)
   const [gameState, setGameState] = useState<ClientGameState | undefined>(
     undefined
@@ -73,13 +73,9 @@ export const GameClient = (props: Props) => {
         saveKey('playerId', playerId)
       }
 
-      createClient({
+      const client = await createClient({
         playerId,
         serverPeerId,
-        onClientCreated: async (client) => {
-          setGameState(await client.getState())
-          setClient(client)
-        },
         onPeerError: (err) => {
           setError(err)
         },
@@ -92,7 +88,10 @@ export const GameClient = (props: Props) => {
         onPeerConnectionError: (err) => {
           setError(err)
         },
-        onStateChange: async (state) => setGameState(state),
+        onStateChange: async (state) => {
+          setError(undefined)
+          setGameState(state)
+        },
         getMove: async () => {
           const pos = await new Promise((resolve) => {
             emitter.current.addEventListener(
@@ -118,6 +117,9 @@ export const GameClient = (props: Props) => {
           return getPushPosition(pos as Position)
         },
       })
+
+      setGameState(await client.client.getState())
+      setClient(client)
     }
     init()
   }, [])
@@ -141,7 +143,7 @@ export const GameClient = (props: Props) => {
     if (!client || !gameState) {
       return
     }
-    client.setExtraPieceRotation(
+    client.client.setExtraPieceRotation(
       getNewRotation(gameState.pieceBag[0].rotation, 90)
     )
   }
@@ -150,7 +152,7 @@ export const GameClient = (props: Props) => {
     if (!client || !adminToken) {
       return
     }
-    await client.start(adminToken)
+    await client.client.start(adminToken)
   }
 
   const containerProps = {

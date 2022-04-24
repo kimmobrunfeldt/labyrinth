@@ -16,7 +16,7 @@ export type ServerRpcAPI = {
   start: (adminToken: string) => void
 }
 
-export type PlayerRpcAPI = {
+export type ClientRpcAPI = {
   onStateChange: (gameState: ClientGameState) => void
   getPush: () => PushPosition
   getMove: () => Position

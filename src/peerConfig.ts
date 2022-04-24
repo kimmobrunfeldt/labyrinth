@@ -18,3 +18,11 @@ export const iceServers = [
     credential: 'openrelayproject',
   },
 ]
+
+/**
+ * 0 Prints no logs.
+ * 1 Prints only errors.
+ * 2 Prints errors and warnings.
+ * 3 Prints all logs.
+ */
+export const debugLevel = 3

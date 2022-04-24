@@ -3,15 +3,17 @@ import MoleClient from 'mole-rpc/MoleClientProxified'
 import MoleServer from 'mole-rpc/MoleServer'
 import Peer, { DataConnection } from 'peerjs'
 import { createGame, CreateGameOptions } from 'src/core/game'
+import { createRecycler } from 'src/core/recycler'
 import { PeerJsTransportClient } from 'src/core/TransportClient'
 import { PeerJsTransportServer } from 'src/core/TransportServer'
 import * as t from 'src/core/types'
 import {
   getRandomAdminToken,
   loopUntilSuccess,
+  waitForEvent,
   wrapWithLogging,
 } from 'src/core/utils'
-import { iceServers } from 'src/peerConfig'
+import { debugLevel, iceServers } from 'src/peerConfig'
 
 export type GameServer = {
   peerId: string
@@ -27,35 +29,68 @@ export async function createServer(
   const players: Record<
     string,
     {
-      client: t.PromisifyMethods<t.PlayerRpcAPI>
+      client: t.PromisifyMethods<t.ClientRpcAPI>
       connection: DataConnection
       status: 'connected' | 'disconnected'
     }
   > = {}
 
-  let peerConnected = false
-  const peer = new Peer(peerId, {
-    debug: 10,
-    config: {
-      iceServers,
+  const network = await createServerNetworking({
+    peerId,
+    onClientConnect: (playerId, connection) => {
+      console.log(`Player '${playerId}' connected`)
+      const server = new MoleServer({
+        transports: [],
+      })
+      const serverRpc: t.PromisifyMethods<t.ServerRpcAPI> = {
+        getState: async () => getStateForPlayer(playerId),
+        getMyPosition: async () => game.getPlayerPosition(playerId),
+        getMyCurrentCards: async () => game.getPlayersCurrentCards(playerId),
+        setExtraPieceRotation: async (rotation: t.Rotation) =>
+          game.setExtraPieceRotationByPlayer(playerId, rotation),
+        setMyName: async (name: string) => game.setNameByPlayer(playerId, name),
+        ...wrapAdminMethods({ start }, adminToken),
+      }
+      server.expose(wrapWithLogging(`Game client ${playerId}`, serverRpc))
+      server.registerTransport(
+        new PeerJsTransportServer({
+          peerConnection: connection,
+        })
+      )
+      const client = new MoleClient({
+        requestTimeout: 60 * 1000,
+        transport: new PeerJsTransportClient({ peerConnection: connection }),
+      })
+      try {
+        if (!(playerId in players)) {
+          game.addPlayer({ id: playerId })
+        }
+      } catch (err) {
+        // Close connection max players joined
+        console.warn('Client join failed:', err)
+        connection.close()
+        return
+      }
+
+      players[playerId] = {
+        client,
+        connection,
+        status: 'connected',
+      }
+    },
+    onClientDisconnect: (playerId) => {
+      console.log(`Player '${playerId}' disconnected`)
+
+      if (playerId in players) {
+        if (game.getState().stage !== 'setup') {
+          players[playerId].status = 'disconnected'
+        } else {
+          delete players[playerId]
+          game.removePlayer(playerId)
+        }
+      }
     },
   })
-
-  function reconnectPeerUntilConnected() {
-    if (peerConnected) {
-      return
-    }
-
-    console.log('Reconnecting server to peer ...')
-    peer.reconnect()
-    setTimeout(reconnectPeerUntilConnected, 5000)
-  }
-
-  peer.on('disconnected', () => {
-    peerConnected = false
-    reconnectPeerUntilConnected()
-  })
-  peer.on('error', (err) => console.error(err))
 
   async function sendStateToEveryone() {
     await Promise.all(
@@ -165,76 +200,69 @@ export async function createServer(
     })
   }
 
-  return new Promise((resolve) => {
-    peer.on('open', (openPeerId) => {
-      peerConnected = true
-      console.log('Server open with peer id', openPeerId)
+  return {
+    peerId: network.peerId,
+    adminToken,
+  }
+}
 
-      peer.on('connection', (conn) => {
-        const playerId = conn.metadata.id
-        console.log(`Player '${playerId}' connected`)
+export type CreateServerNetworkingOptions = {
+  peerId?: string
+  onClientConnect: (id: string, connection: Peer.DataConnection) => void
+  onClientDisconnect: (id: string, connection: Peer.DataConnection) => void
+}
 
-        conn.on('open', async () => {
-          // TODO: No clear separation between server protocol and game logic
-          const server = new MoleServer({
-            transports: [],
-          })
-          const serverRpc: t.PromisifyMethods<t.ServerRpcAPI> = {
-            getState: async () => getStateForPlayer(playerId),
-            getMyPosition: async () => game.getPlayerPosition(playerId),
-            getMyCurrentCards: async () =>
-              game.getPlayersCurrentCards(playerId),
-            setExtraPieceRotation: async (rotation: t.Rotation) =>
-              game.setExtraPieceRotationByPlayer(playerId, rotation),
-            setMyName: async (name: string) =>
-              game.setNameByPlayer(playerId, name),
-            ...wrapAdminMethods({ start }, adminToken),
-          }
-          server.expose(wrapWithLogging(playerId, serverRpc))
-          server.registerTransport(
-            new PeerJsTransportServer({
-              peerConnection: conn,
-            })
-          )
-          const client = new MoleClient({
-            requestTimeout: 60 * 1000,
-            transport: new PeerJsTransportClient({ peerConnection: conn }),
-          })
-          try {
-            if (!(playerId in players)) {
-              game.addPlayer({ id: playerId })
-            }
-          } catch (err) {
-            // Close connection max players joined
-            console.warn('Client join failed:', err)
-            conn.close()
-            return
-          }
+async function createServerNetworking(opts: CreateServerNetworkingOptions) {
+  const recycler = await createRecycler({
+    factory: async () => await _createServerNetworking(opts),
+    destroyer: async (current) => current.destroy(),
+    autoRecycle: (newCurrent, cb) => {
+      newCurrent.peer.on('disconnected', cb)
+      newCurrent.peer.on('error', cb)
+    },
+  })
 
-          players[playerId] = {
-            client,
-            connection: conn,
-            status: 'connected',
-          }
-        })
+  return recycler.current
+}
 
-        conn.on('close', () => {
-          // XXX: Memory-leak sensitive
-          console.log('Client connection closed')
-          if (playerId in players) {
-            if (game.getState().stage !== 'setup') {
-              players[playerId].status = 'disconnected'
-            } else {
-              delete players[playerId]
-              game.removePlayer(playerId)
-            }
-          }
-        })
+async function _createServerNetworking(
+  opts: CreateServerNetworkingOptions
+): Promise<{
+  destroy: () => void
+  peer: Peer
+  peerId: string
+}> {
+  const peer = new Peer(opts.peerId, {
+    debug: debugLevel,
+    config: {
+      iceServers,
+    },
+  })
+  peer.on('error', (err) => console.error(err))
+  peer.on('open', (openPeerId) => {
+    console.log('Server open with peer id', openPeerId)
+
+    peer.on('connection', (conn) => {
+      const playerId = conn.metadata.id
+      conn.on('open', async () => {
+        opts.onClientConnect(playerId, conn)
       })
-
-      resolve({ peerId: openPeerId, adminToken })
+      conn.on('close', () => {
+        opts.onClientDisconnect(playerId, conn)
+      })
     })
   })
+
+  const [openedPeerId] = (await waitForEvent(peer, 'open')) as [string]
+  if (!openedPeerId) {
+    throw new Error('Unexpected undefined for openedPeerId')
+  }
+
+  return {
+    destroy: () => peer.destroy(),
+    peer,
+    peerId: openedPeerId,
+  }
 }
 
 function wrapAdminMethods<

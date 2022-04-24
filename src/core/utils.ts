@@ -99,3 +99,51 @@ export const format = {
     return `[${pos.x}, ${pos.y}]`
   },
 }
+
+type Emitter = {
+  on: (...args: any[]) => void
+}
+export function waitForEvent(emitter: Emitter, eventName: string) {
+  return new Promise((resolve, reject) => {
+    emitter.on(eventName, (...args: unknown[]) => {
+      resolve(args)
+    })
+
+    emitter.on('error', reject)
+    setTimeout(
+      () => reject(new Error('Timeout waiting for emitter event')),
+      10000
+    )
+  })
+}
+
+export function sleep(durationMs: number) {
+  return new Promise((resolve) => setTimeout(resolve, durationMs))
+}
+
+export type MutableProxy<T> = {
+  proxy: T
+  setTarget: (newT: T) => void
+}
+export function createMutableProxy<T>(target: T): MutableProxy<T> {
+  let currentTarget = target
+
+  return {
+    proxy: new Proxy(
+      {},
+      {
+        // Dynamically forward all the traps to the associated methods on the mutable target
+        get: (_target, prop, receiver) => {
+          return Reflect.get(currentTarget as any, prop, receiver)
+        },
+        set: (_tarset, prop, receiver) => {
+          return Reflect.get(currentTarget as any, prop, receiver)
+        },
+      }
+    ) as T,
+
+    setTarget(newTarget: T) {
+      currentTarget = newTarget
+    },
+  }
+}
