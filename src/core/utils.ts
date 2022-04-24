@@ -26,13 +26,18 @@ export async function loopUntilSuccess<ArgsT>(
   optsIn: {
     onError?: (err: Error, ...args: ArgsT[]) => void
     maxTries?: number
+    waitBeforeRetryMs?: number
   } = {}
 ) {
-  const opts = { maxTries: 5, ...optsIn }
+  const opts: Required<typeof optsIn> = {
+    maxTries: 5,
+    waitBeforeRetryMs: 0,
+    onError: () => undefined,
+    ...optsIn,
+  }
 
   let tries = 1
   while (tries <= opts.maxTries) {
-    console.log('try number', tries)
     // Try until the promise succeeds
     try {
       return await fn()
@@ -45,6 +50,7 @@ export async function loopUntilSuccess<ArgsT>(
         throw e
       }
 
+      await sleep(opts.waitBeforeRetryMs)
       continue
     } finally {
       tries++
