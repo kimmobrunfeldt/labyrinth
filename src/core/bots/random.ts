@@ -1,9 +1,9 @@
 import _ from 'lodash'
 import {
   assertDefined,
+  BOARD_PUSH_POSITIONS,
   findConnected,
   getPieceAt,
-  pushPositions,
 } from 'src/core/board'
 import { createClient } from 'src/core/client'
 import { GameServer } from 'src/core/server'
@@ -51,7 +51,7 @@ export function connectBot(
     },
     getPush: async () => {
       await new Promise((resolve) => setTimeout(resolve, 1000))
-      return assertDefined(_.sample(pushPositions))
+      return assertDefined(_.sample(BOARD_PUSH_POSITIONS))
     },
   })
 }

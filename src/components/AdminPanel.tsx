@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { getKey, saveKey } from 'src/sessionStorage'
+import { getKey, saveKey } from 'src/localStorage'
 
 export type Props = {
   onStartGameClick: () => void

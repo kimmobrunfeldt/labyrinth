@@ -8,6 +8,11 @@ import { createClient } from 'src/core/client'
 import * as t from 'src/gameTypes'
 import { ClientGameState, Position } from 'src/gameTypes'
 import { getKey, saveKey } from 'src/sessionStorage'
+import {
+  boardPushPositionToUIPosition,
+  UIPushPosition,
+  uiPushPositionToBoard,
+} from 'src/utils/uiUtils'
 import { EventEmitter, uuid } from 'src/utils/utils'
 import './App.css'
 
@@ -60,6 +65,9 @@ export const GameClient = (props: Props) => {
   const [gameState, setGameState] = useState<ClientGameState | undefined>(
     undefined
   )
+  const [pushPositionHover, setPushPositionHover] = useState<
+    UIPushPosition | undefined
+  >(undefined)
   const bots = useRef<Array<t.PromisifyMethods<t.ServerRpcAPI>>>([])
   const emitter = useRef(new EventEmitter())
 
@@ -115,7 +123,16 @@ export const GameClient = (props: Props) => {
 
           return getPushPosition(pos as Position)
         },
+        onPushPositionHover: async (boardPos?: Position) => {
+          const uiPos = boardPos
+            ? boardPushPositionToUIPosition(boardPos)
+            : undefined
+          setPushPositionHover(uiPos)
+        },
       })
+      if (adminToken) {
+        await client.client.promote(adminToken)
+      }
 
       setGameState(await client.client.getState())
       setClient(client)
@@ -123,15 +140,24 @@ export const GameClient = (props: Props) => {
     init()
   }, [])
 
+  function isMyTurn() {
+    if (!gameState) {
+      return false
+    }
+
+    const myIndex = _.findIndex(
+      gameState.players,
+      (p) => p.id === gameState.me.id
+    )
+    return gameState.playerTurn === myIndex
+  }
+
   async function onAddBot() {
     connectBot(`bot-${uuid()}`, { peerId: serverPeerId })
   }
 
   function onClickPiece(piece: t.CensoredPieceOnBoard) {
     emitter.current.dispatch('onClickPiece', { piece })
-
-    // TODO: remove
-    emitter.current.dispatch('onClickPushPosition', piece.position)
   }
 
   function onClickPushPosition(position: t.Position) {
@@ -139,12 +165,27 @@ export const GameClient = (props: Props) => {
   }
 
   function onClickExtraPiece() {
-    if (!client || !gameState) {
+    if (!client || !gameState || gameState.playerHasPushed) {
       return
     }
+
     client.client.setExtraPieceRotation(
       getNewRotation(gameState.pieceBag[0].rotation, 90)
     )
+  }
+
+  async function onPushPositionHover(hoverPos?: UIPushPosition) {
+    if (!client || !gameState) {
+      return
+    }
+
+    if (!isMyTurn() || gameState.playerHasPushed) {
+      return
+    }
+
+    const boardPos = hoverPos ? uiPushPositionToBoard(hoverPos) : undefined
+    // Don't wait for finish
+    void client.client.setPushPositionHover(boardPos)
   }
 
   async function onStartGameClick() {
@@ -183,6 +224,11 @@ export const GameClient = (props: Props) => {
           onClickPushPosition={onClickPushPosition}
           onClickExtraPiece={onClickExtraPiece}
           previousPushPosition={gameState.previousPushPosition}
+          pushPositionHover={pushPositionHover}
+          onPushPositionHover={onPushPositionHover}
+          isMyTurn={isMyTurn()}
+          playerHasPushed={gameState.playerHasPushed}
+          playerInTurn={gameState.players[gameState.playerTurn]}
         />
       )}
 

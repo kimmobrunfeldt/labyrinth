@@ -11,6 +11,7 @@ import {
   createDeck as createCardDeck,
   createInitialBoardPieces,
   createPieceBag,
+  createPlayerColors,
 } from 'src/core/pieces'
 import * as t from 'src/gameTypes'
 import { format } from 'src/utils/utils'
@@ -32,12 +33,7 @@ export function createGame(opts: CreateGameOptions) {
     board: {
       pieces: createInitialBoardPieces(),
     },
-    playerColors: [
-      t.PlayerColor.Blue,
-      t.PlayerColor.Red,
-      t.PlayerColor.Orange,
-      t.PlayerColor.Purple,
-    ],
+    playerColors: createPlayerColors(),
     players: [],
     playerWhoStarted: 0,
     playerTurn: 0,
@@ -151,6 +147,28 @@ export function createGame(opts: CreateGameOptions) {
     const player = getPlayerById(id)
     game.players = game.players.filter((p) => p.id !== id)
     game.playerColors.push(player.color)
+  })
+
+  // Promotes player as the first player.
+  // This is a bit of an edge-case but if another player connects before
+  // the admin player, the setup stage is in a weird state.
+  // The first player has some special rights at the setup stage
+  // because playerTurn is set to 0.
+  const promotePlayer = mutator((id: string) => {
+    const game = stageGuard(['setup'])
+
+    const index = playerIndexById(id)
+    // Remove the promoted player
+    const [promotedPlayer] = game.players.splice(index, 1)
+    // Add promoted player as the first
+    game.players.unshift(promotedPlayer)
+
+    // Re-assign colors in the original order
+    game.playerColors = createPlayerColors()
+    game.players.forEach((player, index) => {
+      player.color = assertDefined(game.playerColors.pop())
+      player.name = `Player ${index + 1}`
+    })
   })
 
   const pushByPlayer = mutator((playerId: string, pushPos: t.PushPosition) => {
@@ -320,10 +338,12 @@ export function createGame(opts: CreateGameOptions) {
     addPlayer,
     getPlayerById,
     removePlayer,
+    promotePlayer,
     pushByPlayer,
     moveByPlayer,
     nextTurn,
     whosTurn,
+    isPlayersTurn,
     getPlayerPosition,
     getPlayersCurrentCards: (playerId: string) =>
       getPlayersCurrentCards(getPlayerById(playerId)),

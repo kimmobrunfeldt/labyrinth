@@ -19,6 +19,7 @@ export type ClientOptions = {
   onPeerConnectionClose?: () => void
   onPeerConnectionOpen?: () => void
   onStateChange: t.PromisifyMethods<t.ClientRpcAPI>['onStateChange']
+  onPushPositionHover?: t.PromisifyMethods<t.ClientRpcAPI>['onPushPositionHover']
   getPush: t.PromisifyMethods<t.ClientRpcAPI>['getPush']
   getMove: t.PromisifyMethods<t.ClientRpcAPI>['getMove']
 }
@@ -98,6 +99,8 @@ function createRpc(conn: Peer.DataConnection, opts: ClientOptions) {
   })
 
   const clientRpcApi: t.PromisifyMethods<t.ClientRpcAPI> = {
+    // Don't require this for bot clients
+    onPushPositionHover: opts.onPushPositionHover ?? (async () => undefined),
     onStateChange: opts.onStateChange,
     getPush: opts.getPush,
     getMove: opts.getMove,
@@ -120,8 +123,12 @@ function createRpc(conn: Peer.DataConnection, opts: ClientOptions) {
     getMyPosition: (...args) => client.getMyPosition(...args),
     getMyCurrentCards: (...args) => client.getMyCurrentCards(...args),
     setExtraPieceRotation: (...args) => client.setExtraPieceRotation(...args),
+    setPushPositionHover: (...args) => client.setPushPositionHover(...args),
     setMyName: (...args) => client.setMyName(...args),
+    move: (...args) => client.move(...args),
+    push: (...args) => client.push(...args),
     start: (...args) => client.start(...args),
+    promote: (...args) => client.promote(...args),
   }
 
   const retryClient = retryify(clientObj, {

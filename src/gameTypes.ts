@@ -9,15 +9,20 @@ export type ServerRpcAPI = {
   getState: () => ClientGameState
   getMyPosition: () => Position
   getMyCurrentCards: () => Card[]
+  setPushPositionHover: (hoverPos?: Position) => void
   setExtraPieceRotation: (rotation: Rotation) => void
   setMyName: (name: string) => void
+  move: (moveTo: Position) => void
+  push: (pushPos: PushPosition) => void
 } & {
   // Admin API
   start: (adminToken: string) => void
+  promote: (adminToken: string) => void
 }
 
 export type ClientRpcAPI = {
   onStateChange: (gameState: ClientGameState) => void
+  onPushPositionHover: (hoverPos?: Position) => void
   getPush: () => PushPosition
   getMove: () => Position
 }

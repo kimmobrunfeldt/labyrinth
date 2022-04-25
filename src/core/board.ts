@@ -592,7 +592,7 @@ export function pushWithPiece(
   }
 }
 
-export const pushPositions: readonly PushPosition[] = [
+export const BOARD_PUSH_POSITIONS: readonly PushPosition[] = [
   // top
   { x: 1, y: 0, direction: 'down' },
   { x: 3, y: 0, direction: 'down' },
@@ -613,8 +613,9 @@ export const pushPositions: readonly PushPosition[] = [
 
 export function isAllowedPushPosition(pos: Position) {
   return (
-    pushPositions.findIndex((item) => item.x === pos.x && item.y === pos.y) !==
-    -1
+    BOARD_PUSH_POSITIONS.findIndex(
+      (item) => item.x === pos.x && item.y === pos.y
+    ) !== -1
   )
 }
 
@@ -624,7 +625,7 @@ export function getPushPosition(pos: Position): PushPosition {
   }
 
   return assertDefined(
-    pushPositions.find((item) => item.x === pos.x && item.y === pos.y)
+    BOARD_PUSH_POSITIONS.find((item) => item.x === pos.x && item.y === pos.y)
   )
 }
 

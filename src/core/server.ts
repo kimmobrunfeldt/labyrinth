@@ -48,8 +48,33 @@ export async function createServer(
         getMyCurrentCards: async () => game.getPlayersCurrentCards(playerId),
         setExtraPieceRotation: async (rotation: t.Rotation) =>
           game.setExtraPieceRotationByPlayer(playerId, rotation),
+        setPushPositionHover: async (position?: t.Position) => {
+          if (!game.isPlayersTurn(playerId)) {
+            throw new Error(
+              `It's not ${playerId}'s turn. Ignoring push position hover.`
+            )
+          }
+
+          // Forward the information directly to all other clients
+          Object.keys(players).forEach((pId) => {
+            if (playerId === pId) {
+              // Don't send to the client itself
+              return
+            }
+
+            players[pId as keyof typeof players].client.onPushPositionHover(
+              position
+            )
+          })
+        },
         setMyName: async (name: string) => game.setNameByPlayer(playerId, name),
-        ...wrapAdminMethods({ start }, adminToken),
+        move: async (moveTo: t.Position) => game.moveByPlayer(playerId, moveTo),
+        push: async (pushPos: t.PushPosition) =>
+          game.pushByPlayer(playerId, pushPos),
+        ...wrapAdminMethods(
+          { start, promote: async () => game.promotePlayer(playerId) },
+          adminToken
+        ),
       }
       server.expose(wrapWithLogging(`Game client ${playerId}`, serverRpc))
       server.registerTransport(
@@ -156,7 +181,6 @@ export async function createServer(
 
   async function initiateGameLoop() {
     while (game.getState().stage !== 'finished') {
-      console.log('game loop tick')
       try {
         await turn()
         await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -170,33 +194,34 @@ export async function createServer(
 
   async function turn() {
     const player = game.whosTurn()
-    console.log('turn by', player.name)
+    console.log('Turn by', player.name)
+
     await loopUntilSuccess(
       async () => {
-        console.log('push by', player.name)
+        console.log('Push by', player.name)
         const playerPush = await players[
           player.id as keyof typeof players
         ].client.getPush()
 
         game.pushByPlayer(player.id, playerPush)
       },
-      { onError: (err) => console.warn('player push failed', err) }
+      { onError: (err) => console.warn('Player push failed', err) }
     )
 
     await loopUntilSuccess(
       async () => {
-        console.log('move by', player.name)
+        console.log('Move by', player.name)
         const moveTo = await players[
           player.id as keyof typeof players
         ].client.getMove()
 
         game.moveByPlayer(player.id, moveTo)
       },
-      { onError: (err) => console.warn('player move failed', err) }
+      { onError: (err) => console.warn('Player move failed', err) }
     )
 
     await loopUntilSuccess(sendStateToEveryone, {
-      onError: (err) => console.warn('send state to everyone failed:', err),
+      onError: (err) => console.warn('Send state to everyone failed', err),
     })
   }
 

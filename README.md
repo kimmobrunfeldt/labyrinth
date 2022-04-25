@@ -33,4 +33,5 @@ Board
 
 UI
 
+* Caret by olcay kurtulus from NounProject.com
 * Settings by i cons from NounProject.com

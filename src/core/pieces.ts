@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import { Board, Card, Piece } from 'src/gameTypes'
+import { Board, Card, Piece, PlayerColor } from 'src/gameTypes'
 
 export const PIECE_ID_PREFIX = 'piece'
 
@@ -107,3 +107,10 @@ export const createDeck: () => Card[] = () =>
     { found: false, trophy: 'Lizard' },
     { found: false, trophy: 'Bug' },
   ])
+
+export const createPlayerColors = () => [
+  PlayerColor.Blue,
+  PlayerColor.Red,
+  PlayerColor.Orange,
+  PlayerColor.Purple,
+]

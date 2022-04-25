@@ -92,3 +92,21 @@ html,
   box-shadow: rgba(0, 0, 0, .125) 0 3px 5px inset;
   outline: 0;
 }
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.ExtraPiece__fader,
+.ExtraPiece .RotateIcon {
+  opacity: 0;
+  transition: opacity 250ms ease;
+}
+
+.ExtraPiece:hover .ExtraPiece__fader {
+  opacity: 0.5;
+}
+
+.ExtraPiece:hover .RotateIcon {
+  opacity: 1;
+}

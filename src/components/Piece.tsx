@@ -40,6 +40,7 @@ function PieceComponent<T extends Piece | PieceOnBoard>({
 
   return (
     <div
+      className="Piece"
       onClick={() => onClick && onClick(piece)}
       style={{
         ...sharedStyles,
