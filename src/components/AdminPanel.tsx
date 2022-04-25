@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { getKey, saveKey } from 'src/core/sessionStorage'
 
 export type Props = {
   onStartGameClick: () => void
@@ -6,15 +7,27 @@ export type Props = {
   startGameDisabled: boolean
 }
 
+function getSavedAdminPanelOpen(): boolean {
+  return getKey('adminPanelOpen') === 'true'
+}
+
 const AdminPanel = ({
   onStartGameClick,
   startGameDisabled,
   onAddBotClick,
 }: Props) => {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(getSavedAdminPanelOpen())
+
+  function setAndSaveOpen(open: boolean) {
+    saveKey('adminPanelOpen', open ? 'true' : 'false')
+    setOpen(open)
+  }
 
   useEffect(() => {
-    setTimeout(() => setOpen(true), 100)
+    // First time usage
+    if (getKey('adminPanelOpen') === null) {
+      setTimeout(() => setAndSaveOpen(true), 100)
+    }
   }, [])
 
   function onStartButtonClick() {
@@ -56,7 +69,7 @@ const AdminPanel = ({
             fontWeight: 'bold',
             fontSize: open ? '24px' : '30px',
           }}
-          onClick={() => setOpen(!open)}
+          onClick={() => setAndSaveOpen(!open)}
         >
           {open ? '×' : '⚙'}
         </div>

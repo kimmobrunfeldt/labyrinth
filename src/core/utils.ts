@@ -87,7 +87,8 @@ export function wrapWithLogging<
   return _.mapValues(methods, (fn, key) => {
     return async (...args: unknown[]) => {
       console.log(
-        `${label}: ${key}(${args.map((val) => JSON.stringify(val)).join(', ')})`
+        `${label}: ${key} called with ${args.length} arguments:\n`,
+        args
       )
 
       try {
@@ -152,4 +153,8 @@ export function createMutableProxy<T>(target: T): MutableProxy<T> {
       currentTarget = newTarget
     },
   }
+}
+
+export function oppositeIndex(arrayLength: number, index: number): number {
+  return arrayLength - index - 1
 }

@@ -22,6 +22,7 @@ export type ClientRpcAPI = {
   getMove: () => Position
 }
 
+// XXX: There's a risk of leaking private attributes from Game object using this approach
 export type ClientGameState = Omit<Game, 'board' | 'cards' | 'players'> & {
   board: Omit<Board, 'pieces'> & {
     pieces: Array<Array<CensoredPieceOnBoard | null>>
@@ -48,18 +49,21 @@ export type GameSetup = GameCommonProperties & {
   board: Board
   pieceBag: Piece[]
   winners: []
+  previousPushPosition: undefined
 }
 export type GamePlaying = GameCommonProperties & {
   stage: 'playing'
   board: FilledBoard
   pieceBag: [Piece]
   winners: []
+  previousPushPosition: PushPosition
 }
 export type GameFinished = GameCommonProperties & {
   stage: 'finished'
   board: FilledBoard
   pieceBag: [Piece]
   winners: NonEmptyArray<Player>
+  previousPushPosition: PushPosition
 }
 export type GameByStages<T extends GameStage[]> = {
   [K in keyof T]: Game & { stage: T[K] }

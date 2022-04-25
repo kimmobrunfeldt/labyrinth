@@ -1,6 +1,7 @@
 export type Storage = {
   playerId: string
   serverPeerId: string
+  adminPanelOpen: 'true' | 'false'
 }
 
 function isSupported() {

@@ -2,7 +2,6 @@ import _ from 'lodash'
 import React, { useEffect, useRef, useState } from 'react'
 import AdminPanel, { Props as AdminPanelProps } from 'src/components/AdminPanel'
 import BoardComponent from 'src/components/Board'
-import PieceComponent from 'src/components/Piece'
 import { getNewRotation, getPushPosition } from 'src/core/board'
 import { connectBot } from 'src/core/bots/random'
 import { createClient } from 'src/core/client'
@@ -177,21 +176,16 @@ export const GameClient = (props: Props) => {
     <Container {...containerProps}>
       {gameState && (
         <BoardComponent
+          extraPiece={gameState.pieceBag[0]}
           players={gameState.players}
           board={gameState.board}
           onClickPiece={onClickPiece}
           onClickPushPosition={onClickPushPosition}
+          onClickExtraPiece={onClickExtraPiece}
+          previousPushPosition={gameState.previousPushPosition}
         />
       )}
-      {gameState && (
-        <div style={{ position: 'relative' }}>
-          <PieceComponent
-            onClick={onClickExtraPiece}
-            style={{}}
-            piece={gameState.pieceBag[0]}
-          />
-        </div>
-      )}
+
       {gameState && (
         <div>
           {gameState.players.map((player) => {

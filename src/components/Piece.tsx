@@ -6,7 +6,6 @@ import * as t from 'src/core/types'
 import { Piece, PieceOnBoard, Type } from 'src/core/types'
 
 export const PIECE_MARGIN_PX = 2
-export const PIECE_WIDTH = 60
 
 const pieceToSvg: Record<Type, string> = {
   straight: straight,
@@ -14,30 +13,36 @@ const pieceToSvg: Record<Type, string> = {
   't-shape': tShape,
 }
 
-export const STYLES = {
-  display: 'inline-block',
-  width: `${PIECE_WIDTH}px`,
-  height: `${PIECE_WIDTH}px`,
-  margin: 0,
-  padding: 0,
-  borderRadius: '5px',
-  overflow: 'hidden',
+function getSharedStyles(width: number): React.CSSProperties {
+  return {
+    width: `${width}px`,
+    height: `${width}px`,
+    display: 'inline-block',
+    margin: 0,
+    padding: 0,
+    borderRadius: '5px',
+    overflow: 'hidden',
+  }
 }
 
 function PieceComponent<T extends Piece | PieceOnBoard>({
   piece,
-  style,
+  style = {},
   onClick,
+  width,
 }: {
   piece: T
-  style: React.CSSProperties
+  style?: React.CSSProperties
   onClick?: (piece: T) => void
+  width: number
 }) {
+  const sharedStyles = getSharedStyles(width)
+
   return (
     <div
       onClick={() => onClick && onClick(piece)}
       style={{
-        ...STYLES,
+        ...sharedStyles,
         // transform: `rotate(${Math.random() * 1.5}deg)`,
         transformOrigin: '50% 50%',
         transition: 'transform 50ms ease',
@@ -49,7 +54,7 @@ function PieceComponent<T extends Piece | PieceOnBoard>({
         alt=""
         src={pieceToSvg[piece.type]}
         style={{
-          ...STYLES,
+          ...sharedStyles,
           top: 0,
           left: 0,
           position: 'absolute',
@@ -57,7 +62,7 @@ function PieceComponent<T extends Piece | PieceOnBoard>({
       />
       <div
         style={{
-          ...STYLES,
+          ...sharedStyles,
           top: 0,
           left: 0,
           position: 'absolute',
@@ -95,10 +100,16 @@ function getTrophyRotation(type: t.Piece['type']): t.Rotation {
   }
 }
 
-export const EmptyPiece = ({ style }: { style: React.CSSProperties }) => (
+export const EmptyPiece = ({
+  width,
+  style,
+}: {
+  width: number
+  style: React.CSSProperties
+}) => (
   <div
     style={{
-      ...STYLES,
+      ...getSharedStyles(width),
       background: '#eee',
       // transform: `rotate(${Math.random() * 1.5}deg)`,
       ...style,

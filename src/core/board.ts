@@ -16,7 +16,7 @@ import {
   Type,
   WalkableDirections,
 } from 'src/core/types'
-import { format } from 'src/core/utils'
+import { format, oppositeIndex } from 'src/core/utils'
 
 type FillBoardOptions = {
   maxFillPieces?: number
@@ -626,4 +626,18 @@ export function getPushPosition(pos: Position): PushPosition {
   return assertDefined(
     pushPositions.find((item) => item.x === pos.x && item.y === pos.y)
   )
+}
+
+export function getOppositePushPosition(
+  boardWidth: number,
+  pos: PushPosition
+): PushPosition {
+  switch (pos.direction) {
+    case 'up':
+    case 'down':
+      return { ...pos, y: oppositeIndex(boardWidth, pos.y) }
+    case 'right':
+    case 'left':
+      return { ...pos, x: oppositeIndex(boardWidth, pos.x) }
+  }
 }

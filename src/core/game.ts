@@ -1,6 +1,7 @@
 import _ from 'lodash'
 import {
   assertDefined,
+  getOppositePushPosition,
   getPieceAt,
   isValidPlayerMove,
   pushWithPiece,
@@ -42,6 +43,7 @@ export function createGame(opts: CreateGameOptions) {
     playerTurn: 0,
     playerHasPushed: false,
     winners: [],
+    previousPushPosition: undefined,
   }
   randomFillBoard(gameState.board, { pieceBag: gameState.pieceBag })
 
@@ -158,6 +160,20 @@ export function createGame(opts: CreateGameOptions) {
       throw new Error(`It's not ${playerId}'s turn`)
     }
 
+    if (game.previousPushPosition) {
+      const opposite = getOppositePushPosition(
+        game.board.pieces.length,
+        game.previousPushPosition
+      )
+      if (pushPos.x === opposite.x && pushPos.y === opposite.y) {
+        throw new Error(
+          `Illegal push position ${format.pos(
+            pushPos
+          )}. Cannot revert previous push.`
+        )
+      }
+    }
+
     const extraPiece = assertDefined(game.pieceBag.pop())
     const { piece: newExtraPiece, originalPiece } = pushWithPiece(
       game.board,
@@ -173,6 +189,7 @@ export function createGame(opts: CreateGameOptions) {
         `Unexpected amount of extra pieces: ${game.pieceBag.length}`
       )
     }
+    game.previousPushPosition = pushPos
     game.playerHasPushed = true
   })
 
@@ -206,7 +223,7 @@ export function createGame(opts: CreateGameOptions) {
 
   const setExtraPieceRotationByPlayer = mutator(
     (playerId: string, rotation: t.Rotation) => {
-      const game = stageGuard(['playing'])
+      const game = stageGuard(['setup', 'playing'])
 
       if (![0, 90, 180, 270].includes(rotation)) {
         throw new Error(`Invalid rotation: ${rotation}`)
