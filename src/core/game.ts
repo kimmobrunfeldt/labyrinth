@@ -12,8 +12,8 @@ import {
   createInitialBoardPieces,
   createPieceBag,
 } from 'src/core/pieces'
-import * as t from 'src/core/types'
-import { format } from 'src/core/utils'
+import * as t from 'src/gameTypes'
+import { format } from 'src/utils/utils'
 
 export type CreateGameOptions = {
   onStateChange?: (game: t.Game) => void

@@ -3,12 +3,12 @@ import MoleServer from 'mole-rpc/MoleServer'
 import X from 'mole-rpc/X'
 import Peer from 'peerjs'
 import retryify from 'promise-retryify'
-import { createRecycler } from 'src/core/recycler'
-import { PeerJsTransportClient } from 'src/core/TransportClient'
-import { PeerJsTransportServer } from 'src/core/TransportServer'
-import * as t from 'src/core/types'
-import { waitForEvent, wrapWithLogging } from 'src/core/utils'
+import * as t from 'src/gameTypes'
 import { debugLevel, iceServers } from 'src/peerConfig'
+import { createRecycler } from 'src/utils/recycler'
+import { PeerJsTransportClient } from 'src/utils/TransportClient'
+import { PeerJsTransportServer } from 'src/utils/TransportServer'
+import { waitForEvent, wrapWithLogging } from 'src/utils/utils'
 
 export type ClientOptions = {
   playerId: string

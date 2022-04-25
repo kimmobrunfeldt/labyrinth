@@ -2,8 +2,8 @@ import React from 'react'
 import corner from 'src/assets/corner.svg'
 import straight from 'src/assets/straight.svg'
 import tShape from 'src/assets/t-shape.svg'
-import * as t from 'src/core/types'
-import { Piece, PieceOnBoard, Type } from 'src/core/types'
+import * as t from 'src/gameTypes'
+import { Piece, PieceOnBoard, Type } from 'src/gameTypes'
 
 export const PIECE_MARGIN_PX = 2
 

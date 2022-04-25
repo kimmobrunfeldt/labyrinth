@@ -15,8 +15,8 @@ import {
   Rotation,
   Type,
   WalkableDirections,
-} from 'src/core/types'
-import { format, oppositeIndex } from 'src/core/utils'
+} from 'src/gameTypes'
+import { format, oppositeIndex } from 'src/utils/utils'
 
 type FillBoardOptions = {
   maxFillPieces?: number

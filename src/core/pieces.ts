@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import { Board, Card, Piece } from 'src/core/types'
+import { Board, Card, Piece } from 'src/gameTypes'
 
 export const PIECE_ID_PREFIX = 'piece'
 

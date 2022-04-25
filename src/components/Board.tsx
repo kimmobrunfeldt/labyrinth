@@ -3,13 +3,13 @@ import React, { useState } from 'react'
 import { useResizeDetector } from 'react-resize-detector'
 import Piece, { EmptyPiece, PIECE_MARGIN_PX } from 'src/components/Piece'
 import { assertDefined, getPushPosition, pushPositions } from 'src/core/board'
-import * as t from 'src/core/types'
+import * as t from 'src/gameTypes'
 import {
   CensoredPieceOnBoard,
   ClientGameState,
   PushPosition,
-} from 'src/core/types'
-import { oppositeIndex } from 'src/core/utils'
+} from 'src/gameTypes'
+import { oppositeIndex } from 'src/utils/utils'
 
 const PIECES_IN_A_ROW = 7
 // Accounts for the empty piece placeholders in the edges

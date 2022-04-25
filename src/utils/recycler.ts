@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import { sleep } from 'src/core/utils'
+import { sleep } from 'src/utils/utils'
 
 export type RecyclerOpts<T> = {
   factory: () => Promise<T>

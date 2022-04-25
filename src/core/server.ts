@@ -3,17 +3,17 @@ import MoleClient from 'mole-rpc/MoleClientProxified'
 import MoleServer from 'mole-rpc/MoleServer'
 import Peer, { DataConnection } from 'peerjs'
 import { createGame, CreateGameOptions } from 'src/core/game'
-import { createRecycler } from 'src/core/recycler'
-import { PeerJsTransportClient } from 'src/core/TransportClient'
-import { PeerJsTransportServer } from 'src/core/TransportServer'
-import * as t from 'src/core/types'
+import * as t from 'src/gameTypes'
+import { debugLevel, iceServers } from 'src/peerConfig'
+import { createRecycler } from 'src/utils/recycler'
+import { PeerJsTransportClient } from 'src/utils/TransportClient'
+import { PeerJsTransportServer } from 'src/utils/TransportServer'
 import {
   getRandomAdminToken,
   loopUntilSuccess,
   waitForEvent,
   wrapWithLogging,
-} from 'src/core/utils'
-import { debugLevel, iceServers } from 'src/peerConfig'
+} from 'src/utils/utils'
 
 export type GameServer = {
   peerId: string

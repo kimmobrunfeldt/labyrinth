@@ -25,7 +25,7 @@ import {
   NonEmptyArray,
   Piece,
   PieceOnBoard,
-} from 'src/core/types'
+} from 'src/gameTypes'
 
 /**
  * Allows algorithms to present some middle state via UI

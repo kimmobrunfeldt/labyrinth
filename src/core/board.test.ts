@@ -1,6 +1,6 @@
 import _ from 'lodash'
 import { getWeightedRandomPieceIndex } from 'src/core/board'
-import { NonEmptyArray, Piece, Type } from 'src/core/types'
+import { NonEmptyArray, Piece, Type } from 'src/gameTypes'
 
 describe('getWeightedRandomPieceIndex', () => {
   test('produces correct distribution', () => {

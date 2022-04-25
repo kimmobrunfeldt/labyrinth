@@ -3,8 +3,8 @@ import ConfirmLeave from 'src/components/ConfirmLeave'
 import GameClient from 'src/components/GameClient'
 import StartPage from 'src/components/StartPage'
 import { createServer } from 'src/core/server'
-import { getKey, saveKey } from 'src/core/sessionStorage'
-import { getRandomPeerId } from 'src/core/utils'
+import { getKey, saveKey } from 'src/sessionStorage'
+import { getRandomPeerId } from 'src/utils/utils'
 import './App.css'
 
 export const App = () => {

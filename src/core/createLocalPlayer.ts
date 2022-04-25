@@ -1,4 +1,4 @@
-import * as t from 'src/core/types'
+import * as t from 'src/gameTypes'
 
 export function createLocalPlayer(ui: t.PlayerUI) {
   return (server: t.ServerRpcAPI) => {

@@ -1,6 +1,6 @@
 import _ from 'lodash'
 import { createDeck } from 'src/core/pieces'
-import * as t from 'src/core/types'
+import * as t from 'src/gameTypes'
 
 export class EventEmitter extends EventTarget {
   dispatch(eventType: string, meta: Record<string, unknown> = {}) {

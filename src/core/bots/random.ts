@@ -7,7 +7,7 @@ import {
 } from 'src/core/board'
 import { createClient } from 'src/core/client'
 import { GameServer } from 'src/core/server'
-import * as t from 'src/core/types'
+import * as t from 'src/gameTypes'
 
 export function connectBot(
   playerId: string,
