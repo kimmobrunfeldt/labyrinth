@@ -118,10 +118,10 @@ function getTrophyRotation(type: t.Piece['type']): t.Rotation {
 
 export const EmptyPiece = ({
   width,
-  style,
+  style = {},
 }: {
   width: number
-  style: React.CSSProperties
+  style?: React.CSSProperties
 }) => (
   <div
     style={{

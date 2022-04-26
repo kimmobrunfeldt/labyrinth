@@ -30,6 +30,7 @@ function Container({ children }: { children: React.ReactNode }) {
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
+        position: 'relative',
         padding: '30px 15px',
       }}
     >
@@ -182,6 +183,7 @@ export const GameClient = (props: Props) => {
     return <Container {...containerProps}>{message}</Container>
   }
 
+  const myNextCard = gameState.myCurrentCards[0]
   return (
     <div>
       <MenuBar
@@ -193,6 +195,27 @@ export const GameClient = (props: Props) => {
       />
 
       <Container {...containerProps}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'absolute',
+            top: '10px',
+            right: '0',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ fontWeight: 'bold', color: '#555' }}>NEXT</div>
+          <img
+            style={{
+              position: 'relative',
+              top: '-8px',
+              width: '70px',
+            }}
+            src={`${process.env.PUBLIC_URL}/pieces/${myNextCard.trophy}.svg`}
+            alt={myNextCard.trophy}
+          />
+        </div>
         {gameState && (
           <BoardComponent
             gameState={gameState}

@@ -2,7 +2,7 @@ import _ from 'lodash'
 import React, { useState } from 'react'
 import { useResizeDetector } from 'react-resize-detector'
 import Piece, { EmptyPiece, PIECE_MARGIN_PX } from 'src/components/Piece'
-import { getPushPosition } from 'src/core/board'
+import { BOARD_PUSH_POSITIONS, getPushPosition } from 'src/core/board'
 import { centered } from 'src/css'
 import * as t from 'src/gameTypes'
 import {
@@ -44,6 +44,18 @@ function directionToCaretRotation(direction: t.Direction): t.Rotation {
   }
 }
 
+type PieceToRender =
+  | {
+      type: 'board'
+      piece: t.CensoredPieceOnBoard | null
+      x: number
+      y: number
+    }
+  | {
+      type: 'extra'
+      extraPiece: t.Piece
+    }
+
 const BoardComponent = ({
   gameState,
   board,
@@ -67,17 +79,14 @@ const BoardComponent = ({
   const pieceWidth = Math.floor(
     (width - (PIECE_SLOTS - 1) * PIECE_MARGIN_PX) / PIECE_SLOTS
   )
-  const piecesForRender = _.flatten(
+  const piecesToRender: Array<PieceToRender> = _.flatten(
     board.pieces.map((row, y) =>
       row.map((piece, x) => {
-        return {
-          piece,
-          x,
-          y,
-        }
+        return { type: 'board', piece, x, y }
       })
     )
   )
+  piecesToRender.push({ type: 'extra', extraPiece })
 
   const pushPlaceholdersForRender = _.compact(
     UI_PUSH_POSITIONS.map(({ x, y, direction }) => {
@@ -137,54 +146,102 @@ const BoardComponent = ({
         )
       })}
 
-      {piecesForRender.map(({ piece, x, y }) => {
-        const style: React.CSSProperties = {
-          ...(boardPiecesStyles?.[y]?.[x] || {}),
-          position: 'absolute',
-          transform: `translate(${
-            PIECE_MARGIN_PX + (x + 1) * (pieceWidth + PIECE_MARGIN_PX)
-          }px, ${
-            PIECE_MARGIN_PX + (y + 1) * (pieceWidth + PIECE_MARGIN_PX)
-          }px)`,
-        }
+      {piecesToRender.map((toRender) => {
+        const key =
+          toRender.type === 'board'
+            ? toRender.piece?.id ?? `empty-${toRender.x}-${toRender.y}`
+            : toRender.extraPiece.id
 
-        if (!piece) {
-          return (
-            <EmptyPiece
-              width={pieceWidth}
-              key={`empty-${x}-${y}`}
-              style={style}
+        let content: JSX.Element
+        if (toRender.type === 'extra') {
+          content = (
+            <ExtraPiece
+              key={toRender.extraPiece.id}
+              onClickExtraPiece={onClickExtraPiece}
+              position={resolvedExtraPiecePos}
+              isMyTurn={isMyTurn}
+              pieceWidth={pieceWidth}
+              playerInTurn={playerInTurn}
+              piece={extraPiece}
+              playing={gameState.stage === 'playing'}
+              playerHasPushed={playerHasPushed}
             />
           )
+        } else {
+          const { piece } = toRender
+
+          if (!piece) {
+            content = <EmptyPiece width={pieceWidth} />
+          } else {
+            content = (
+              <BoardPiece
+                key={piece.id}
+                pieceWidth={pieceWidth}
+                piece={piece}
+                playerInTurn={playerInTurn}
+                playerHasPushed={playerHasPushed}
+                onClick={() => {
+                  if (playerHasPushed) {
+                    onMove(piece)
+                  } else {
+                    onPush(getPushPosition(piece.position))
+                  }
+                }}
+                onMouseOver={() => {
+                  if (gameState.stage !== 'playing') {
+                    return
+                  }
+
+                  const boardPushPos = BOARD_PUSH_POSITIONS.find(
+                    (p) => p.x === piece.position.x && p.y === piece.position.y
+                  )
+                  if (!boardPushPos) {
+                    return
+                  }
+
+                  const uiPushPos = boardPushPositionToUIPosition(boardPushPos)
+                  setLocalPushPositionHover(uiPushPos)
+                  onPushPositionHover(uiPushPos)
+                }}
+              />
+            )
+          }
         }
 
-        return (
-          <BoardPiece
-            key={piece.id}
-            pieceWidth={pieceWidth}
-            piece={piece}
-            style={style}
-            onClick={() => {
-              if (playerHasPushed) {
-                onMove(piece)
-              } else {
-                onPush(getPushPosition(piece.position))
+        const style: React.CSSProperties =
+          toRender.type === 'board'
+            ? {
+                ...(boardPiecesStyles?.[toRender.y]?.[toRender.x] || {}),
+                transform: `translate(${
+                  PIECE_MARGIN_PX +
+                  (toRender.x + 1) * (pieceWidth + PIECE_MARGIN_PX)
+                }px, ${
+                  PIECE_MARGIN_PX +
+                  (toRender.y + 1) * (pieceWidth + PIECE_MARGIN_PX)
+                }px)`,
               }
+            : {
+                transform: `translate(${
+                  PIECE_MARGIN_PX +
+                  resolvedExtraPiecePos.x * (pieceWidth + PIECE_MARGIN_PX)
+                }px, ${
+                  PIECE_MARGIN_PX +
+                  resolvedExtraPiecePos.y * (pieceWidth + PIECE_MARGIN_PX)
+                }px)`,
+              }
+        return (
+          <div
+            style={{
+              ...style,
+              transition: 'transform 600ms ease',
+              position: 'absolute',
             }}
-          />
+            key={key}
+          >
+            {content}
+          </div>
         )
       })}
-
-      <ExtraPiece
-        onClickExtraPiece={onClickExtraPiece}
-        position={resolvedExtraPiecePos}
-        isMyTurn={isMyTurn}
-        pieceWidth={pieceWidth}
-        playerInTurn={playerInTurn}
-        piece={extraPiece}
-        playing={gameState.stage === 'playing'}
-        playerHasPushed={playerHasPushed}
-      />
     </>
   )
 
@@ -213,14 +270,26 @@ const BoardComponent = ({
 
 type BoardPieceProps = {
   onClick: React.DOMAttributes<HTMLDivElement>['onClick']
+  onMouseOver: React.DOMAttributes<HTMLDivElement>['onMouseOver']
   piece: t.CensoredPieceOnBoard
-  style: React.CSSProperties
+  style?: React.CSSProperties
   pieceWidth: number
+  playerInTurn: t.CensoredPlayer
+  playerHasPushed: boolean
 }
 
-const BoardPiece = ({ onClick, piece, style, pieceWidth }: BoardPieceProps) => (
+const BoardPiece = ({
+  onClick,
+  onMouseOver,
+  piece,
+  style = {},
+  pieceWidth,
+  playerInTurn,
+  playerHasPushed,
+}: BoardPieceProps) => (
   <div
     onClick={onClick}
+    onMouseOver={onMouseOver}
     style={{
       ...style,
       width: `${pieceWidth}px`,
@@ -228,7 +297,6 @@ const BoardPiece = ({ onClick, piece, style, pieceWidth }: BoardPieceProps) => (
       position: 'absolute',
       margin: 0,
       padding: 0,
-      transition: 'transform 600ms ease',
     }}
   >
     <Piece
@@ -243,6 +311,8 @@ const BoardPiece = ({ onClick, piece, style, pieceWidth }: BoardPieceProps) => (
         const cardsFound = _.sumBy(player.censoredCards, (c) =>
           c.found ? 1 : 0
         )
+        const isPlayerTurn = playerInTurn.id === player.id
+
         return (
           <div
             title={`${player.name}, ${cardsFound} / ${player.censoredCards.length} found`}
@@ -255,9 +325,16 @@ const BoardPiece = ({ onClick, piece, style, pieceWidth }: BoardPieceProps) => (
               }px))`,
               height: '30%',
               width: '30%',
+              opacity: piece.trophy ? 0.8 : 1,
               borderRadius: '9999px',
               background: player.color,
               position: 'absolute',
+              ...(playerHasPushed && isPlayerTurn
+                ? {
+                    border: `2px solid white`,
+                    boxShadow: `0px 0px 0px 1.5px ${playerInTurn.color}`,
+                  }
+                : {}),
             }}
           />
         )
@@ -344,7 +421,6 @@ const ExtraPiece = ({
   isMyTurn,
   pieceWidth,
   playing,
-  position,
   piece,
   playerInTurn,
   playerHasPushed,
@@ -357,14 +433,10 @@ const ExtraPiece = ({
     style={{
       userSelect: 'none',
       position: 'absolute',
-      transform: `translate(${
-        PIECE_MARGIN_PX + position.x * (pieceWidth + PIECE_MARGIN_PX)
-      }px, ${PIECE_MARGIN_PX + position.y * (pieceWidth + PIECE_MARGIN_PX)}px)`,
       width: `${pieceWidth}px`,
       height: `${pieceWidth}px`,
       margin: 0,
       padding: 0,
-      transition: 'transform 600ms ease',
       background: '#eee',
     }}
   >
@@ -372,7 +444,9 @@ const ExtraPiece = ({
       style={{
         border: `1px solid transparent`,
         transition: 'all 200ms ease',
-        boxShadow: `0px 0px 0px 1.5px ${playing ? playerInTurn.color : '#aaa'}`,
+        boxShadow: `0px 0px 0px 1.5px ${
+          playing && !playerHasPushed ? playerInTurn.color : '#aaa'
+        }`,
       }}
       width={pieceWidth}
       piece={piece}
