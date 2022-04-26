@@ -103,7 +103,7 @@ export async function createServer(
         status: 'connected',
       }
     },
-    onClientDisconnect: (playerId) => {
+    onClientDisconnect: async (playerId) => {
       console.log(`Player '${playerId}' disconnected`)
 
       if (playerId in players) {
@@ -112,6 +112,8 @@ export async function createServer(
         } else {
           delete players[playerId]
           game.removePlayer(playerId)
+
+          await sendStateToEveryone()
         }
       }
     },

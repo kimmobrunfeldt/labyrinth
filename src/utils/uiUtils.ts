@@ -1,4 +1,5 @@
 import _ from 'lodash'
+import { useEffect, useRef } from 'react'
 import { BOARD_PUSH_POSITIONS } from 'src/core/board'
 import * as t from 'src/gameTypes'
 import { oppositeIndex } from 'src/utils/utils'
@@ -57,4 +58,12 @@ export function oppositeUIPosition(uiPos: UIPushPosition): UIPushPosition {
     case 'left':
       return { ...uiPos, x: oppositeIndex(PIECE_SLOTS, uiPos.x) }
   }
+}
+
+export function usePrevious<T>(value: T): T | undefined {
+  const ref = useRef<T>()
+  useEffect(() => {
+    ref.current = value
+  }, [value])
+  return ref.current
 }

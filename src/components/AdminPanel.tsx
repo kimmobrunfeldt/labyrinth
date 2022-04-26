@@ -1,39 +1,22 @@
-import React, { useEffect, useState } from 'react'
-import { getKey, saveKey } from 'src/localStorage'
+import React from 'react'
+import * as t from 'src/gameTypes'
 
 export type Props = {
+  open: boolean
   onStartGameClick: () => void
   onAddBotClick: () => void
-  startGameDisabled: boolean
-}
-
-function getSavedAdminPanelOpen(): boolean {
-  return getKey('adminPanelOpen') === 'true'
+  gameState: t.ClientGameState
+  onCloseClick: () => void
 }
 
 const AdminPanel = ({
+  open,
   onStartGameClick,
-  startGameDisabled,
+  gameState,
   onAddBotClick,
+  onCloseClick,
 }: Props) => {
-  const [open, setOpen] = useState(getSavedAdminPanelOpen())
-
-  function setAndSaveOpen(open: boolean) {
-    saveKey('adminPanelOpen', open ? 'true' : 'false')
-    setOpen(open)
-  }
-
-  useEffect(() => {
-    // First time usage
-    if (getKey('adminPanelOpen') === null) {
-      setTimeout(() => setAndSaveOpen(true), 100)
-    }
-  }, [])
-
-  function onStartButtonClick() {
-    setOpen(false)
-    onStartGameClick()
-  }
+  const startDisabled = Boolean(gameState && gameState.stage !== 'setup')
 
   return (
     <>
@@ -59,9 +42,7 @@ const AdminPanel = ({
             top: '5px',
             right: '5px',
             zIndex: 90,
-            transform: open
-              ? `translateX(5px)`
-              : `translateX(calc(100% + 5px))`,
+            transform: `translateX(5px)`,
             transition: 'all 400ms ease',
             padding: '8px 14px',
             cursor: 'pointer',
@@ -69,9 +50,9 @@ const AdminPanel = ({
             fontWeight: 'bold',
             fontSize: open ? '24px' : '30px',
           }}
-          onClick={() => setAndSaveOpen(!open)}
+          onClick={onCloseClick}
         >
-          {open ? '×' : '⚙'}
+          {'×'}
         </div>
         <div style={{ padding: '18px 20px', height: '100%' }}>
           <div
@@ -91,7 +72,7 @@ const AdminPanel = ({
               </h2>
               <div style={{ padding: '20px 0 0 0' }}>
                 <button
-                  disabled={startGameDisabled}
+                  disabled={startDisabled}
                   className="button-50 button-50-secondary button-50-small"
                   onClick={onAddBotClick}
                 >
@@ -107,9 +88,9 @@ const AdminPanel = ({
               }}
             >
               <button
-                disabled={startGameDisabled}
+                disabled={startDisabled}
                 className="button-50 button-50-small"
-                onClick={onStartButtonClick}
+                onClick={onStartGameClick}
               >
                 Start game
               </button>

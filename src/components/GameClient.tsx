@@ -1,7 +1,7 @@
 import _ from 'lodash'
 import React, { useEffect, useRef, useState } from 'react'
-import AdminPanel, { Props as AdminPanelProps } from 'src/components/AdminPanel'
 import BoardComponent from 'src/components/Board'
+import MenuBar from 'src/components/MenuBar'
 import { getNewRotation, getPushPosition } from 'src/core/board'
 import { connectBot } from 'src/core/bots/random'
 import { createClient } from 'src/core/client'
@@ -21,17 +21,7 @@ type Props = {
   adminToken?: string
 }
 
-function Container({
-  children,
-  adminToken,
-  gameState,
-  onStartGameClick,
-  onAddBotClick,
-}: React.PropsWithChildren<
-  Props & {
-    gameState?: ClientGameState
-  } & Omit<AdminPanelProps, 'startGameDisabled'>
->) {
+function Container({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="GameClient"
@@ -43,13 +33,6 @@ function Container({
         padding: '30px 15px',
       }}
     >
-      {adminToken && (
-        <AdminPanel
-          startGameDisabled={Boolean(gameState && gameState.stage !== 'setup')}
-          onStartGameClick={onStartGameClick}
-          onAddBotClick={onAddBotClick}
-        />
-      )}
       {children}
     </div>
   )
@@ -198,8 +181,6 @@ export const GameClient = (props: Props) => {
   const containerProps = {
     ...props,
     gameState,
-    onStartGameClick,
-    onAddBotClick: onAddBot,
   }
 
   if (error) {
@@ -214,67 +195,34 @@ export const GameClient = (props: Props) => {
   }
 
   return (
-    <Container {...containerProps}>
-      {gameState && (
-        <BoardComponent
-          extraPiece={gameState.pieceBag[0]}
-          players={gameState.players}
-          board={gameState.board}
-          onClickPiece={onClickPiece}
-          onClickPushPosition={onClickPushPosition}
-          onClickExtraPiece={onClickExtraPiece}
-          previousPushPosition={gameState.previousPushPosition}
-          pushPositionHover={pushPositionHover}
-          onPushPositionHover={onPushPositionHover}
-          isMyTurn={isMyTurn()}
-          playerHasPushed={gameState.playerHasPushed}
-          playerInTurn={gameState.players[gameState.playerTurn]}
-        />
-      )}
+    <div>
+      <MenuBar
+        gameState={gameState}
+        showAdmin={Boolean(adminToken)}
+        onAddBotClick={onAddBot}
+        onStartGameClick={onStartGameClick}
+        serverPeerId={serverPeerId}
+      />
 
-      {gameState && (
-        <div>
-          {gameState.players.map((player) => {
-            const foundCount = player.censoredCards.filter(
-              (c) => c.found
-            ).length
-
-            return (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-                key={player.id}
-              >
-                <div style={{ width: '10px' }}>
-                  {gameState.players[gameState.playerTurn].id === player.id
-                    ? 'x'
-                    : ''}
-                </div>
-                <div
-                  style={{
-                    height: '16px',
-                    width: '16px',
-                    margin: '5px',
-                    background: player.color,
-                    borderRadius: '9999px',
-                  }}
-                />
-                <span>
-                  <b>{player.name}</b> {foundCount} /{' '}
-                  {player.censoredCards.length}
-                  {player.id === gameState.me.id ? ' (me)' : ''}:
-                </span>
-                <span style={{ marginLeft: '5px' }}>
-                  {player.currentCards.map((c) => c.trophy).join(', ')}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </Container>
+      <Container {...containerProps}>
+        {gameState && (
+          <BoardComponent
+            extraPiece={gameState.pieceBag[0]}
+            players={gameState.players}
+            board={gameState.board}
+            onClickPiece={onClickPiece}
+            onClickPushPosition={onClickPushPosition}
+            onClickExtraPiece={onClickExtraPiece}
+            previousPushPosition={gameState.previousPushPosition}
+            pushPositionHover={pushPositionHover}
+            onPushPositionHover={onPushPositionHover}
+            isMyTurn={isMyTurn()}
+            playerHasPushed={gameState.playerHasPushed}
+            playerInTurn={gameState.players[gameState.playerTurn]}
+          />
+        )}
+      </Container>
+    </div>
   )
 }
 

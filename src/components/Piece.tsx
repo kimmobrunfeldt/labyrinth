@@ -1,9 +1,10 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import corner from 'src/assets/corner.svg'
 import straight from 'src/assets/straight.svg'
 import tShape from 'src/assets/t-shape.svg'
 import * as t from 'src/gameTypes'
 import { Piece, PieceOnBoard, Type } from 'src/gameTypes'
+import { usePrevious } from 'src/utils/uiUtils'
 
 export const PIECE_MARGIN_PX = 2
 
@@ -36,6 +37,20 @@ function PieceComponent<T extends Piece | PieceOnBoard>({
   onClick?: (piece: T) => void
   width: number
 }) {
+  const [rotation, setRotation] = useState<number>(piece.rotation)
+  const prevPiece = usePrevious(piece)
+
+  useEffect(() => {
+    const prevPieceRotation = prevPiece?.rotation ?? piece.rotation
+    const newPieceRotation = piece.rotation
+    const addRotation =
+      newPieceRotation >= prevPieceRotation
+        ? newPieceRotation - prevPieceRotation
+        : 360 - prevPieceRotation + newPieceRotation
+
+    setRotation((r) => r + addRotation)
+  }, [prevPiece, piece, piece.rotation])
+
   const sharedStyles = getSharedStyles(width)
 
   return (
@@ -46,8 +61,8 @@ function PieceComponent<T extends Piece | PieceOnBoard>({
         ...sharedStyles,
         // transform: `rotate(${Math.random() * 1.5}deg)`,
         transformOrigin: '50% 50%',
-        transition: 'transform 50ms ease',
-        transform: `rotate(${piece.rotation ? piece.rotation : 0}deg)`,
+        transition: 'transform 150ms ease',
+        transform: `rotate(${rotation}deg)`,
         ...style,
       }}
     >
