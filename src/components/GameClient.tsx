@@ -2,7 +2,7 @@ import _ from 'lodash'
 import React, { useEffect, useRef, useState } from 'react'
 import BoardComponent from 'src/components/Board'
 import MenuBar from 'src/components/MenuBar'
-import { getNewRotation, getPushPosition } from 'src/core/board'
+import { getNewRotation } from 'src/core/board'
 import { connectBot } from 'src/core/bots/random'
 import { createClient } from 'src/core/client'
 import * as t from 'src/gameTypes'
@@ -13,7 +13,7 @@ import {
   UIPushPosition,
   uiPushPositionToBoard,
 } from 'src/utils/uiUtils'
-import { EventEmitter, uuid } from 'src/utils/utils'
+import { uuid } from 'src/utils/utils'
 import './App.css'
 
 type Props = {
@@ -51,8 +51,7 @@ export const GameClient = (props: Props) => {
   const [pushPositionHover, setPushPositionHover] = useState<
     UIPushPosition | undefined
   >(undefined)
-  const bots = useRef<Array<t.PromisifyMethods<t.ServerRpcAPI>>>([])
-  const emitter = useRef(new EventEmitter())
+  const bots = useRef<Array<Awaited<ReturnType<typeof createClient>>>>([])
 
   useEffect(() => {
     async function init() {
@@ -81,30 +80,6 @@ export const GameClient = (props: Props) => {
         onStateChange: async (state) => {
           setError(undefined)
           setGameState(state)
-        },
-        getMove: async () => {
-          const pos = await new Promise((resolve) => {
-            emitter.current.addEventListener(
-              'onClickPiece',
-              _.once((e) => {
-                resolve(e.piece.position)
-              })
-            )
-          })
-
-          return pos as Position
-        },
-        getPush: async () => {
-          const pos = await new Promise((resolve) => {
-            emitter.current.addEventListener(
-              'onClickPushPosition',
-              _.once((pos) => {
-                resolve(pos)
-              })
-            )
-          })
-
-          return getPushPosition(pos as Position)
         },
         onPushPositionHover: async (boardPos?: Position) => {
           const uiPos = boardPos
@@ -136,15 +111,24 @@ export const GameClient = (props: Props) => {
   }
 
   async function onAddBot() {
-    connectBot(`bot-${uuid()}`, { peerId: serverPeerId })
+    const client = await connectBot(`bot-${uuid()}`, { peerId: serverPeerId })
+    bots.current.push(client)
   }
 
-  function onClickPiece(piece: t.CensoredPieceOnBoard) {
-    emitter.current.dispatch('onClickPiece', { piece })
+  async function onMove(piece: t.CensoredPieceOnBoard) {
+    if (!client || !gameState || !isMyTurn()) {
+      return
+    }
+
+    await client.client.move(piece.position)
   }
 
-  function onClickPushPosition(position: t.Position) {
-    emitter.current.dispatch('onClickPushPosition', position)
+  async function onPush(pushPos: t.PushPosition) {
+    if (!client || !gameState || !isMyTurn()) {
+      return
+    }
+
+    await client.client.push(pushPos)
   }
 
   function onClickExtraPiece() {
@@ -162,7 +146,11 @@ export const GameClient = (props: Props) => {
       return
     }
 
-    if (!isMyTurn() || gameState.playerHasPushed) {
+    if (
+      !isMyTurn() ||
+      gameState.playerHasPushed ||
+      gameState.stage !== 'playing'
+    ) {
       return
     }
 
@@ -198,7 +186,7 @@ export const GameClient = (props: Props) => {
     <div>
       <MenuBar
         gameState={gameState}
-        showAdmin={Boolean(adminToken)}
+        showAdmin={!_.isUndefined(adminToken)}
         onAddBotClick={onAddBot}
         onStartGameClick={onStartGameClick}
         serverPeerId={serverPeerId}
@@ -207,11 +195,12 @@ export const GameClient = (props: Props) => {
       <Container {...containerProps}>
         {gameState && (
           <BoardComponent
+            gameState={gameState}
             extraPiece={gameState.pieceBag[0]}
             players={gameState.players}
             board={gameState.board}
-            onClickPiece={onClickPiece}
-            onClickPushPosition={onClickPushPosition}
+            onMove={onMove}
+            onPush={onPush}
             onClickExtraPiece={onClickExtraPiece}
             previousPushPosition={gameState.previousPushPosition}
             pushPositionHover={pushPositionHover}

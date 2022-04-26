@@ -14,12 +14,13 @@ import {
 } from 'src/utils/uiUtils'
 
 export type Props = {
+  gameState: t.ClientGameState
   board: t.ClientGameState['board']
   players: t.ClientGameState['players']
   // Additional styles for each piece
   boardPiecesStyles?: React.CSSProperties[][]
-  onClickPiece: (piece: t.CensoredPieceOnBoard) => void
-  onClickPushPosition: (position: t.PushPosition) => void
+  onMove: (piece: t.CensoredPieceOnBoard) => void
+  onPush: (position: t.PushPosition) => void
   onPushPositionHover: (position?: UIPushPosition) => void
   onClickExtraPiece: () => void
   extraPiece: t.Piece
@@ -44,9 +45,10 @@ function directionToCaretRotation(direction: t.Direction): t.Rotation {
 }
 
 const BoardComponent = ({
+  gameState,
   board,
-  onClickPiece,
-  onClickPushPosition,
+  onMove,
+  onPush,
   onClickExtraPiece,
   boardPiecesStyles,
   extraPiece,
@@ -124,6 +126,10 @@ const BoardComponent = ({
             pieceWidth={pieceWidth}
             uiPushPosition={uiPushPosition}
             onMouseOver={() => {
+              if (gameState.stage !== 'playing') {
+                return
+              }
+
               setLocalPushPositionHover(uiPushPosition)
               onPushPositionHover(uiPushPosition)
             }}
@@ -159,8 +165,11 @@ const BoardComponent = ({
             piece={piece}
             style={style}
             onClick={() => {
-              onClickPiece(piece)
-              onClickPushPosition(getPushPosition(piece.position))
+              if (playerHasPushed) {
+                onMove(piece)
+              } else {
+                onPush(getPushPosition(piece.position))
+              }
             }}
           />
         )
@@ -173,6 +182,8 @@ const BoardComponent = ({
         pieceWidth={pieceWidth}
         playerInTurn={playerInTurn}
         piece={extraPiece}
+        playing={gameState.stage === 'playing'}
+        playerHasPushed={playerHasPushed}
       />
     </>
   )
@@ -180,7 +191,12 @@ const BoardComponent = ({
   return (
     <div
       ref={ref}
-      className={isMyTurn ? 'Board Board--myturn' : 'Board'}
+      className={[
+        'Board',
+        isMyTurn ? 'Board--myturn' : '',
+        gameState.stage === 'playing' ? 'Board--playing' : '',
+        gameState.playerHasPushed ? 'Board--has-pushed' : '',
+      ].join(' ')}
       style={{
         position: 'relative',
         padding: `${PIECE_MARGIN_PX}px`,
@@ -202,8 +218,9 @@ type BoardPieceProps = {
   pieceWidth: number
 }
 
-const BoardPiece = ({ piece, style, pieceWidth }: BoardPieceProps) => (
+const BoardPiece = ({ onClick, piece, style, pieceWidth }: BoardPieceProps) => (
   <div
+    onClick={onClick}
     style={{
       ...style,
       width: `${pieceWidth}px`,
@@ -318,20 +335,27 @@ type ExtraPieceProps = {
   pieceWidth: number
   piece: t.Piece
   isMyTurn: boolean
+  playerHasPushed: boolean
+  playing: boolean
   playerInTurn: t.CensoredPlayer
 }
 const ExtraPiece = ({
   onClickExtraPiece,
   isMyTurn,
   pieceWidth,
+  playing,
   position,
   piece,
   playerInTurn,
+  playerHasPushed,
 }: ExtraPieceProps) => (
   <div
-    onClick={onClickExtraPiece}
-    className={`ExtraPiece ${isMyTurn ? 'cursor-pointer' : ''}`}
+    onClick={() => playing && onClickExtraPiece()}
+    className={`ExtraPiece ${
+      isMyTurn && playing && !playerHasPushed ? 'cursor-pointer' : ''
+    }`}
     style={{
+      userSelect: 'none',
       position: 'absolute',
       transform: `translate(${
         PIECE_MARGIN_PX + position.x * (pieceWidth + PIECE_MARGIN_PX)
@@ -347,7 +371,8 @@ const ExtraPiece = ({
     <Piece
       style={{
         border: `1px solid transparent`,
-        boxShadow: `0px 0px 0px 1.5px ${playerInTurn.color}`,
+        transition: 'all 200ms ease',
+        boxShadow: `0px 0px 0px 1.5px ${playing ? playerInTurn.color : '#aaa'}`,
       }}
       width={pieceWidth}
       piece={piece}

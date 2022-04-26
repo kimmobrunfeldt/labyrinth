@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import * as t from 'src/gameTypes'
 
 export type Props = {
@@ -17,6 +17,19 @@ const AdminPanel = ({
   onCloseClick,
 }: Props) => {
   const startDisabled = Boolean(gameState && gameState.stage !== 'setup')
+
+  function keyDown(e: KeyboardEvent) {
+    if (e.keyCode === 27) {
+      onCloseClick()
+    }
+  }
+
+  useEffect(() => {
+    document.addEventListener('keydown', keyDown)
+    return () => {
+      document.removeEventListener('keydown', keyDown)
+    }
+  }, [])
 
   return (
     <>
@@ -37,12 +50,12 @@ const AdminPanel = ({
         }}
       >
         <div
+          className="icon-hover"
           style={{
             position: 'absolute',
-            top: '5px',
+            top: '7px',
             right: '5px',
             zIndex: 90,
-            transform: `translateX(5px)`,
             transition: 'all 400ms ease',
             padding: '8px 14px',
             cursor: 'pointer',

@@ -9,9 +9,10 @@ export class EventEmitter extends EventTarget {
 }
 
 export function getRandomPeerId(): string {
-  const words = _.take(_.shuffle(createDeck()), 2).map((c) =>
-    c.trophy.toLocaleLowerCase()
-  )
+  const words = _.take(
+    _.shuffle(createDeck()).filter((c) => c.trophy.length < 9),
+    2
+  ).map((c) => c.trophy.toLocaleLowerCase())
   const number = _.padStart(`${_.random(999)}`, 3, '0')
   return `${words.join('-')}-${number}`
 }

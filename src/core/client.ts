@@ -13,16 +13,15 @@ import { waitForEvent, wrapWithLogging } from 'src/utils/utils'
 export type ClientOptions = {
   playerId: string
   serverPeerId: string
-  onClientCreated?: (client: t.PromisifyMethods<t.ServerRpcAPI>) => void
   onPeerError?: (err: Error) => void
   onPeerConnectionError?: (err: Error) => void
   onPeerConnectionClose?: () => void
   onPeerConnectionOpen?: () => void
   onStateChange: t.PromisifyMethods<t.ClientRpcAPI>['onStateChange']
   onPushPositionHover?: t.PromisifyMethods<t.ClientRpcAPI>['onPushPositionHover']
-  getPush: t.PromisifyMethods<t.ClientRpcAPI>['getPush']
-  getMove: t.PromisifyMethods<t.ClientRpcAPI>['getMove']
 }
+
+export type Client = Awaited<ReturnType<typeof createClient>>
 
 /**
  * The caller of `createClient` needs to take extra care to only save the reference
@@ -102,8 +101,6 @@ function createRpc(conn: Peer.DataConnection, opts: ClientOptions) {
     // Don't require this for bot clients
     onPushPositionHover: opts.onPushPositionHover ?? (async () => undefined),
     onStateChange: opts.onStateChange,
-    getPush: opts.getPush,
-    getMove: opts.getMove,
   }
 
   clientServer.expose(wrapWithLogging('server', clientRpcApi))

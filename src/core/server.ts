@@ -10,10 +10,13 @@ import { PeerJsTransportClient } from 'src/utils/TransportClient'
 import { PeerJsTransportServer } from 'src/utils/TransportServer'
 import {
   getRandomAdminToken,
-  loopUntilSuccess,
+  sleep,
   waitForEvent,
   wrapWithLogging,
 } from 'src/utils/utils'
+
+export const TURN_TIMEOUT_SECONDS = 60
+export const CHECK_TURN_END_INTERVAL_SECONDS = 0.5
 
 export type GameServer = {
   peerId: string
@@ -185,9 +188,8 @@ export async function createServer(
     while (game.getState().stage !== 'finished') {
       try {
         await turn()
-        await new Promise((resolve) => setTimeout(resolve, 1000))
       } catch (e) {
-        await new Promise((resolve) => setTimeout(resolve, 100))
+        console.warn(e)
         console.warn('Skipping turn')
         game.nextTurn()
       }
@@ -198,33 +200,20 @@ export async function createServer(
     const player = game.whosTurn()
     console.log('Turn by', player.name)
 
-    await loopUntilSuccess(
-      async () => {
-        console.log('Push by', player.name)
-        const playerPush = await players[
-          player.id as keyof typeof players
-        ].client.getPush()
+    for (
+      let i = 0;
+      i < TURN_TIMEOUT_SECONDS / CHECK_TURN_END_INTERVAL_SECONDS;
+      ++i
+    ) {
+      await sleep(CHECK_TURN_END_INTERVAL_SECONDS * 1000)
 
-        game.pushByPlayer(player.id, playerPush)
-      },
-      { onError: (err) => console.warn('Player push failed', err) }
-    )
+      if (game.whosTurn().id !== player.id) {
+        console.log('Player', player.name, 'has finished their turn')
+        return
+      }
+    }
 
-    await loopUntilSuccess(
-      async () => {
-        console.log('Move by', player.name)
-        const moveTo = await players[
-          player.id as keyof typeof players
-        ].client.getMove()
-
-        game.moveByPlayer(player.id, moveTo)
-      },
-      { onError: (err) => console.warn('Player move failed', err) }
-    )
-
-    await loopUntilSuccess(sendStateToEveryone, {
-      onError: (err) => console.warn('Send state to everyone failed', err),
-    })
+    throw new Error(`Turn timeout for player ${player.name}`)
   }
 
   return {

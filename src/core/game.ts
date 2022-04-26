@@ -40,6 +40,7 @@ export function createGame(opts: CreateGameOptions) {
     playerHasPushed: false,
     winners: [],
     previousPushPosition: undefined,
+    turnCounter: 0,
   }
   randomFillBoard(gameState.board, { pieceBag: gameState.pieceBag })
 
@@ -81,6 +82,7 @@ export function createGame(opts: CreateGameOptions) {
       game.playerTurn = 0
     }
     game.playerHasPushed = false
+    game.turnCounter += 1
   })
 
   const start = mutator(() => {

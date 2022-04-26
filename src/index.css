@@ -103,11 +103,11 @@ html,
   transition: opacity 250ms ease;
 }
 
-.Board--myturn .ExtraPiece:hover .ExtraPiece__fader {
+:not(.Board--has-pushed).Board--playing.Board--myturn .ExtraPiece:hover .ExtraPiece__fader {
   opacity: 0.5;
 }
 
-.Board--myturn .ExtraPiece:hover .RotateIcon {
+:not(.Board--has-pushed).Board--playing.Board--myturn .ExtraPiece:hover .RotateIcon {
   opacity: 1;
 }
 

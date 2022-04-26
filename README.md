@@ -36,3 +36,4 @@ UI
 * Caret by olcay kurtulus from NounProject.com
 * Settings by i cons from NounProject.com
 * Play Icon by sureya from NounProject.com
+* Player by nico bayu saputro from NounProject.com

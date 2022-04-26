@@ -25,4 +25,4 @@ export const iceServers = [
  * 2 Prints errors and warnings.
  * 3 Prints all logs.
  */
-export const debugLevel = 3
+export const debugLevel = 2

@@ -29,9 +29,12 @@ function getCenterElement(
         </a>
       )
     case 'playing': {
+      const action = gameState.playerHasPushed ? 'move' : 'push'
       const player = gameState.players[gameState.playerTurn]
       const label =
-        player.id === gameState.me.id ? 'Your turn' : `${player.name}'s turn`
+        player.id === gameState.me.id
+          ? `Your turn to ${action}`
+          : `${player.name}'s turn to ${action}`
       return <span>{label}</span>
     }
     case 'finished': {
@@ -86,43 +89,59 @@ export default function MenuBar({
           onStartGameClick={_onStartGameClick}
         />
       )}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          background: '#F9F4EC',
-          height: '100%',
-          padding: '0 20px 0 10px',
-          borderRadius: '0 100px 100px 0',
-        }}
-      >
-        <img
-          className="cursor-pointer icon-hover"
-          onClick={() => setOpen(true)}
+      {showAdmin ? (
+        <div
           style={{
-            boxSizing: 'content-box',
-            padding: '10px',
-            width: '20px',
-            height: '20px',
-            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            background: '#F9F4EC',
+            height: '100%',
+            padding: '0 20px 0 10px',
+            borderRadius: '0 100px 100px 0',
           }}
-          src={`${process.env.PUBLIC_URL}/Settings.svg`}
-          alt="Settings"
-        />
-        <img
-          className="cursor-pointer icon-hover"
-          onClick={() => onStartGameClick()}
+        >
+          <img
+            className="cursor-pointer icon-hover"
+            onClick={() => setOpen(true)}
+            style={{
+              boxSizing: 'content-box',
+              padding: '10px',
+              width: '20px',
+              height: '20px',
+              zIndex: 10,
+            }}
+            src={`${process.env.PUBLIC_URL}/Settings.svg`}
+            alt="Settings"
+          />
+          <img
+            className="cursor-pointer icon-hover"
+            onClick={() => onStartGameClick()}
+            style={{
+              boxSizing: 'content-box',
+              padding: '10px',
+              width: '20px',
+              height: '20px',
+              zIndex: 10,
+            }}
+            src={`${process.env.PUBLIC_URL}/Play.svg`}
+            alt="Start game"
+          />
+        </div>
+      ) : (
+        <div
           style={{
-            boxSizing: 'content-box',
-            padding: '10px',
-            width: '20px',
-            height: '20px',
-            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            background: '#F9F4EC',
+            height: '100%',
+            padding: '0 30px 0 15px',
+            borderRadius: '0 100px 100px 0',
+            color: '#454545',
           }}
-          src={`${process.env.PUBLIC_URL}/Play.svg`}
-          alt="Start game"
-        />
-      </div>
+        >
+          {gameState.me.name}
+        </div>
+      )}
       <div style={{ textAlign: 'center', fontSize: '14px' }}>
         {getCenterElement(gameState, serverPeerId)}
       </div>
@@ -136,16 +155,15 @@ export default function MenuBar({
           borderRadius: '100px 0 0 100px',
         }}
       >
-        <span
+        <img
           style={{
-            color: '#97907F',
-            fontSize: '20px',
-            fontWeight: 'bold',
-            marginRight: '20px',
+            width: '20px',
+            height: '20px',
+            marginRight: '15px',
           }}
-        >
-          #
-        </span>
+          src={`${process.env.PUBLIC_URL}/Players.svg`}
+          alt="Players"
+        />
         <TransitionGroup style={{ display: 'flex' }}>
           {gameState.players.map((p, index) => {
             const cardsFound = _.sumBy(p.censoredCards, (c) =>

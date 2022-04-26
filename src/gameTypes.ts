@@ -23,8 +23,6 @@ export type ServerRpcAPI = {
 export type ClientRpcAPI = {
   onStateChange: (gameState: ClientGameState) => void
   onPushPositionHover: (hoverPos?: Position) => void
-  getPush: () => PushPosition
-  getMove: () => Position
 }
 
 // XXX: There's a risk of leaking private attributes from Game object using this approach
@@ -46,6 +44,7 @@ export type GameCommonProperties = {
   playerHasPushed: boolean
   playerTurn: number
   playerWhoStarted: number
+  turnCounter: number
 }
 export type Game = GameSetup | GamePlaying | GameFinished
 export type GameStage = 'setup' | 'playing' | 'finished'
