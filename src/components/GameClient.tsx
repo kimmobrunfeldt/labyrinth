@@ -260,6 +260,9 @@ export const GameClient = (props: Props) => {
         onRestartGameClick={onRestartGameClick}
         serverPeerId={serverPeerId}
       />
+      {gameState.stage !== 'setup' && myNextCard && (
+        <CurrentTrophy trophy={myNextCard.trophy} />
+      )}
 
       <div
         style={{
@@ -269,10 +272,6 @@ export const GameClient = (props: Props) => {
           height: '100%',
         }}
       >
-        {gameState.stage !== 'setup' && myNextCard && (
-          <CurrentTrophy trophy={myNextCard.trophy} />
-        )}
-
         <BoardComponent
           gameState={gameState}
           extraPiece={gameState.pieceBag[0]}
@@ -288,7 +287,7 @@ export const GameClient = (props: Props) => {
           playerHasPushed={gameState.playerHasPushed}
           playerInTurn={gameState.players[gameState.playerTurn]}
         />
-        {gameState.stage === 'setup' && (
+        {adminToken && gameState.stage === 'setup' && (
           <BoardShuffleIcon onShuffleBoardClick={onShuffleBoardClick} />
         )}
       </div>
@@ -346,7 +345,7 @@ const CurrentTrophy = ({ trophy }: { trophy: t.Trophy }) => (
       display: 'flex',
       flexDirection: 'column',
       position: 'absolute',
-      top: '8px',
+      top: '68px',
       right: '0',
       textAlign: 'center',
     }}
