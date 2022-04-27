@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react'
-import ConfirmLeave from 'src/components/ConfirmLeave'
 import GameClient from 'src/components/GameClient'
 import StartPage from 'src/components/StartPage'
 import { createServer } from 'src/core/server'
@@ -50,12 +49,7 @@ export const App = () => {
   return (
     <div className="App">
       {!server && <StartPage onHostGame={hostGame} onJoinGame={joinGame} />}
-      <ConfirmLeave
-        when={
-          Boolean(server?.isServerHost) &&
-          process.env.NODE_ENV !== 'development'
-        }
-      />
+
       {server && (
         <GameClient
           serverPeerId={server.peerId}

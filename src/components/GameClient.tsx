@@ -1,6 +1,7 @@
 import _ from 'lodash'
 import React, { useEffect, useRef, useState } from 'react'
 import BoardComponent from 'src/components/Board'
+import ConfirmLeave from 'src/components/ConfirmLeave'
 import MenuBar from 'src/components/MenuBar'
 import { RotateIcon } from 'src/components/RotateIcon'
 import { getNewRotation } from 'src/core/board'
@@ -242,6 +243,15 @@ export const GameClient = (props: Props) => {
   const myNextCard = gameState.myCurrentCards[0]
   return (
     <Container {...containerProps}>
+      <ConfirmLeave
+        when={
+          Boolean(adminToken) &&
+          gameState &&
+          gameState.stage === 'playing' &&
+          process.env.NODE_ENV !== 'development'
+        }
+      />
+
       <MenuBar
         gameState={gameState}
         showAdmin={!_.isUndefined(adminToken)}
