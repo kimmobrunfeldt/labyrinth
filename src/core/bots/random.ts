@@ -41,7 +41,7 @@ export async function connectBot(
       turnsReacted.add(gameState.turnCounter)
 
       // Loop until success, because the bot doesn't know all rules
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 2000))
       await loopUntilSuccess(
         async () => {
           await push(gameState, client)
@@ -49,7 +49,7 @@ export async function connectBot(
         { maxTries: 5, onError: (err) => logger.error('Unable to push', err) }
       )
 
-      await new Promise((resolve) => setTimeout(resolve, 800))
+      await new Promise((resolve) => setTimeout(resolve, 3000))
       await loopUntilSuccess(
         async () => {
           await move(gameState, client)
