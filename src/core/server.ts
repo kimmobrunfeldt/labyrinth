@@ -2,6 +2,7 @@ import _ from 'lodash'
 import MoleClient from 'mole-rpc/MoleClientProxified'
 import MoleServer from 'mole-rpc/MoleServer'
 import Peer, { DataConnection } from 'peerjs'
+import { assertDefined } from 'src/core/board'
 import { createGame, CreateGameOptions } from 'src/core/game'
 import * as t from 'src/gameTypes'
 import { debugLevel, iceServers } from 'src/peerConfig'
@@ -65,7 +66,7 @@ export async function createServer(
           }
 
           // Forward the information directly to all other clients
-          Object.keys(players).forEach((pId) => {
+          Object.keys(getConnectedPlayers()).forEach((pId) => {
             if (playerId === pId) {
               // Don't send to the client itself
               return
@@ -103,14 +104,20 @@ export async function createServer(
         requestTimeout: 60 * 1000,
         transport: new PeerJsTransportClient({ peerConnection: connection }),
       })
+
+      function setPlayer() {
+        players[playerId] = {
+          client,
+          connection,
+          status: 'connected',
+        }
+      }
+
       try {
         if (!(playerId in players)) {
-          players[playerId] = {
-            client,
-            connection,
-            status: 'connected',
-          }
+          setPlayer()
           game.addPlayer({ id: playerId })
+          return
         }
       } catch (err) {
         // Close connection max players joined
@@ -119,12 +126,13 @@ export async function createServer(
 
         await client.onServerFull()
         connection.close()
-        return
       }
+
+      setPlayer()
+      await sendStateToEveryone()
     },
     onClientDisconnect: async (playerId) => {
       logger.log(`Player '${playerId}' disconnected`)
-
       if (!(playerId in players)) {
         return
       }
@@ -139,15 +147,31 @@ export async function createServer(
     },
   })
 
+  function getConnectedPlayers() {
+    const connected: typeof players = {}
+    Object.keys(players).forEach((playerId) => {
+      if (players[playerId].status === 'connected') {
+        connected[playerId] = players[playerId]
+      }
+    })
+    return connected
+  }
+
   async function sendStateToEveryone() {
     await Promise.all(
-      Object.keys(players).map((playerId) => {
+      Object.keys(getConnectedPlayers()).map((playerId) => {
         const clientGameState = getStateForPlayer(playerId)
         return players[playerId as keyof typeof players].client.onStateChange(
           clientGameState
         )
       })
     )
+  }
+
+  async function sendMessage(msg: string) {
+    Object.keys(getConnectedPlayers()).forEach((playerId) => {
+      players[playerId as keyof typeof players].client.onMessage(msg)
+    })
   }
 
   function getStateForPlayer(playerId: string): t.ClientGameState {
@@ -206,7 +230,10 @@ export async function createServer(
 
     initiateGameLoop()
       .then(sendStateToEveryone)
-      .then(() => logger.log('Game loop ended!'))
+      .then(() => {
+        sendMessage('Game ended.')
+        logger.log('Game loop ended!')
+      })
   }
 
   async function initiateGameLoop() {
@@ -216,6 +243,7 @@ export async function createServer(
       } catch (e) {
         logger.warn(e)
         logger.warn('Skipping turn')
+        sendMessage(`Skipping turn for ${game.whosTurn().name}`)
         game.nextTurn()
       }
     }
@@ -224,7 +252,10 @@ export async function createServer(
   async function turn() {
     const player = game.whosTurn()
     logger.log('Turn by', player.name)
+    sendMessage(`Turn for ${player.name}`)
     const turnCounterNow = game.getState().turnCounter
+
+    const secondLeftWarnings = [30, 10].sort().reverse()
 
     for (
       let i = 0;
@@ -232,7 +263,6 @@ export async function createServer(
       ++i
     ) {
       await sleep(CHECK_TURN_END_INTERVAL_SECONDS * 1000)
-
       if (game.getState().stage === 'setup') {
         logger.log('Game has restarted!')
         return
@@ -247,8 +277,24 @@ export async function createServer(
         logger.log('Player', player.name, 'has finished their turn')
         return
       }
+
+      const secondsPassed = i * CHECK_TURN_END_INTERVAL_SECONDS
+      const timeLeft = TURN_TIMEOUT_SECONDS - secondsPassed
+      const warning = secondLeftWarnings.find((s) => timeLeft < s)
+      if (warning) {
+        const first = assertDefined(secondLeftWarnings.shift())
+        if (first !== warning) {
+          throw new Error(`Unexpected condition`)
+        }
+        sendMessage(`${warning} seconds left in turn`)
+      }
     }
 
+    sendMessage(
+      `Timeout for ${
+        game.whosTurn().name
+      } after ${TURN_TIMEOUT_SECONDS} seconds`
+    )
     throw new Error(`Turn timeout for player ${player.name}`)
   }
 

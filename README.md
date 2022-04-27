@@ -38,3 +38,4 @@ UI
 * Play Icon by sureya from NounProject.com
 * Player by nico bayu saputro from NounProject.com
 * Replay by Cuputo from NounProject.com
+* Cross by Hassan ali from NounProject.com

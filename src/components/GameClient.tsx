@@ -28,16 +28,24 @@ function Container({ children }: { children: React.ReactNode }) {
       className="GameClient"
       style={{
         display: 'flex',
+        flex: 1,
         flexDirection: 'column',
-        justifyContent: 'center',
+        justifyContent: 'space-between',
         alignItems: 'center',
         position: 'relative',
-        padding: '30px 15px',
       }}
     >
       {children}
     </div>
   )
+}
+
+type Message = { time: Date; message: string }
+function createMessage(msg: string): Message {
+  return {
+    time: new Date(),
+    message: msg,
+  }
 }
 
 export const GameClient = (props: Props) => {
@@ -53,7 +61,9 @@ export const GameClient = (props: Props) => {
   const [pushPositionHover, setPushPositionHover] = useState<
     UIPushPosition | undefined
   >(undefined)
-  const [messages, setMessages] = useState<string[]>([])
+  const [messages, setMessages] = useState<Message[]>([
+    createMessage('Game setup'),
+  ])
   const bots = useRef<Array<Awaited<ReturnType<typeof createClient>>>>([])
 
   useEffect(() => {
@@ -95,8 +105,7 @@ export const GameClient = (props: Props) => {
           setError(new Error('Game server full'))
         },
         onMessage: async (msg) => {
-          console.log('msg', msg)
-          setMessages([...messages, msg])
+          onMessage(msg)
         },
       })
       if (adminToken) {
@@ -108,6 +117,10 @@ export const GameClient = (props: Props) => {
     }
     init()
   }, [])
+
+  function onMessage(msg: string) {
+    setMessages((msgs) => [...msgs, createMessage(msg)])
+  }
 
   function isMyTurn() {
     if (!gameState) {
@@ -208,19 +221,27 @@ export const GameClient = (props: Props) => {
   }
 
   if (error) {
-    return <Container {...containerProps}>Error: {error.message}</Container>
+    return (
+      <Container {...containerProps}>
+        <div style={{ padding: '20px' }}>Error: {error.message}</div>
+      </Container>
+    )
   }
 
   if (!gameState) {
     const message = adminToken
       ? 'Starting the server ...'
       : `Connecting to ${serverPeerId} ...`
-    return <Container {...containerProps}>{message}</Container>
+    return (
+      <Container {...containerProps}>
+        <div style={{ padding: '20px' }}>{message}</div>
+      </Container>
+    )
   }
 
   const myNextCard = gameState.myCurrentCards[0]
   return (
-    <div>
+    <Container {...containerProps}>
       <MenuBar
         gameState={gameState}
         showAdmin={!_.isUndefined(adminToken)}
@@ -230,10 +251,18 @@ export const GameClient = (props: Props) => {
         serverPeerId={serverPeerId}
       />
 
-      <Container {...containerProps}>
+      <div
+        style={{
+          padding: '0 10px',
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+        }}
+      >
         {gameState.stage !== 'setup' && myNextCard && (
           <CurrentTrophy trophy={myNextCard.trophy} />
         )}
+
         <BoardComponent
           gameState={gameState}
           extraPiece={gameState.pieceBag[0]}
@@ -249,44 +278,57 @@ export const GameClient = (props: Props) => {
           playerHasPushed={gameState.playerHasPushed}
           playerInTurn={gameState.players[gameState.playerTurn]}
         />
-
         {gameState.stage === 'setup' && (
-          <div
-            style={{
-              userSelect: 'none',
-              position: 'absolute',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              width: '100%',
-              height: '100%',
-            }}
-          >
-            <div
-              title="Shuffle board"
-              onClick={onShuffleBoardClick}
-              className="icon-hover"
-              style={{
-                cursor: 'pointer',
-                position: 'absolute',
-                zIndex: 10,
-                width: '10%',
-                maxWidth: '60px',
-              }}
-            >
-              <RotateIcon
-                fill="#454545"
-                style={{
-                  width: '100%',
-                }}
-              />
-            </div>
-          </div>
+          <BoardShuffleIcon onShuffleBoardClick={onShuffleBoardClick} />
         )}
-      </Container>
-    </div>
+      </div>
+
+      <div style={{ padding: '0 15px', width: '100%' }}>
+        <MessageBox messages={messages} />
+      </div>
+    </Container>
   )
 }
+
+const BoardShuffleIcon = ({
+  onShuffleBoardClick,
+}: {
+  onShuffleBoardClick: () => void
+}) => (
+  <div
+    style={{
+      userSelect: 'none',
+      position: 'absolute',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: '100%',
+      height: '100%',
+      top: 0,
+      left: 0,
+    }}
+  >
+    <div
+      title="Shuffle board"
+      onClick={onShuffleBoardClick}
+      className="icon-hover"
+      style={{
+        cursor: 'pointer',
+        position: 'absolute',
+        zIndex: 10,
+        width: '10%',
+        maxWidth: '60px',
+      }}
+    >
+      <RotateIcon
+        fill="#454545"
+        style={{
+          width: '100%',
+        }}
+      />
+    </div>
+  </div>
+)
 
 const CurrentTrophy = ({ trophy }: { trophy: t.Trophy }) => (
   <div
@@ -309,6 +351,36 @@ const CurrentTrophy = ({ trophy }: { trophy: t.Trophy }) => (
       src={`${process.env.PUBLIC_URL}/pieces/${trophy}.svg`}
       alt={trophy}
     />
+  </div>
+)
+
+const MessageBox = ({ messages }: { messages: Message[] }) => (
+  <div
+    style={{
+      background: '#eee',
+      width: '100%',
+      padding: '20px 20px',
+      fontSize: '12px',
+      height: '150px',
+      borderRadius: '5px',
+      overflow: 'auto',
+    }}
+  >
+    {messages.map((msg, i) => (
+      <div
+        key={i}
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          fontFamily: 'monospace',
+        }}
+      >
+        <div style={{ marginRight: '10px' }}>
+          {msg.time.toLocaleTimeString()}
+        </div>
+        <div>{msg.message}</div>
+      </div>
+    ))}
   </div>
 )
 

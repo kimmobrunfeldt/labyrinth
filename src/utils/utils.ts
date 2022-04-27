@@ -109,16 +109,20 @@ type Emitter = {
   on: (...args: any[]) => void
 }
 export function waitForEvent(emitter: Emitter, eventName: string) {
+  const errorAtCallsite = new Error()
   return new Promise((resolve, reject) => {
     emitter.on(eventName, (...args: unknown[]) => {
       resolve(args)
     })
 
     emitter.on('error', reject)
-    setTimeout(
-      () => reject(new Error('Timeout waiting for emitter event')),
-      10000
-    )
+    setTimeout(() => {
+      reject(
+        Object.assign(errorAtCallsite, {
+          message: `Timeout waiting for event '${eventName}'`,
+        })
+      )
+    }, 10000)
   })
 }
 

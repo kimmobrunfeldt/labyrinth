@@ -259,8 +259,10 @@ const BoardComponent = ({
         position: 'relative',
         padding: `${PIECE_MARGIN_PX}px`,
         width: '100%',
+        margin: '0 auto',
         minWidth: '260px',
-        maxWidth: '1000px',
+        maxWidth: '800px',
+        maxHeight: '80vh',
         aspectRatio: '1 / 1',
       }}
     >

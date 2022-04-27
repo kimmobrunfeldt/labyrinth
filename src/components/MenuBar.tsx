@@ -241,6 +241,19 @@ export default function MenuBar({
                   }}
                 >
                   {cardsFound}
+                  {p.status === 'disconnected' && (
+                    <img
+                      style={{
+                        position: 'absolute',
+                        bottom: '-3px',
+                        right: '-3px',
+                        width: '12px',
+                        height: '12px',
+                      }}
+                      src={`${process.env.PUBLIC_URL}/Cross.svg`}
+                      alt=""
+                    />
+                  )}
                 </div>
               </CSSTransition>
             )
