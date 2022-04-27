@@ -37,3 +37,4 @@ UI
 * Settings by i cons from NounProject.com
 * Play Icon by sureya from NounProject.com
 * Player by nico bayu saputro from NounProject.com
+* Replay by Cuputo from NounProject.com

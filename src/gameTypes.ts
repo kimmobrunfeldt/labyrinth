@@ -17,12 +17,16 @@ export type ServerRpcAPI = {
 } & {
   // Admin API
   start: (adminToken: string) => void
+  restart: (adminToken: string) => void
   promote: (adminToken: string) => void
+  shuffleBoard: (adminToken: string, level: ShuffleLevel) => void
 }
 
 export type ClientRpcAPI = {
   onStateChange: (gameState: ClientGameState) => void
+  onMessage: (message: string) => void
   onPushPositionHover: (hoverPos?: Position) => void
+  onServerFull: () => void
 }
 
 // XXX: There's a risk of leaking private attributes from Game object using this approach
@@ -30,7 +34,7 @@ export type ClientGameState = Omit<Game, 'board' | 'cards' | 'players'> & {
   board: Omit<Board, 'pieces'> & {
     pieces: Array<Array<CensoredPieceOnBoard | null>>
   }
-  players: Array<CensoredPlayer>
+  players: Array<CensoredPlayer & { status: 'connected' | 'disconnected' }>
   me: CensoredPlayer
   myCurrentCards: Card[]
   myPosition?: Position
@@ -123,6 +127,7 @@ export type NeighborPiece = {
   piece: PieceOnBoard
   direction: Direction
 }
+export type ShuffleLevel = 'easy' | 'medium' | 'hard' | 'perfect'
 
 // Piece
 export type Type = 'straight' | 'corner' | 't-shape'

@@ -84,13 +84,10 @@ export function uuid() {
 
 export function wrapWithLogging<
   T extends { [key: string]: (...args: any[]) => any }
->(label: string, methods: T): T {
+>(logger: Logger, methods: T): T {
   return _.mapValues(methods, (fn, key) => {
     return async (...args: unknown[]) => {
-      console.log(
-        `${label}: ${key} called with ${args.length} arguments:\n`,
-        args
-      )
+      logger.log(`${key} called with ${args.length} arguments:\n`, args)
 
       try {
         return await fn(...args)
@@ -158,4 +155,15 @@ export function createMutableProxy<T>(target: T): MutableProxy<T> {
 
 export function oppositeIndex(arrayLength: number, index: number): number {
   return arrayLength - index - 1
+}
+
+export type Logger = ReturnType<typeof getLogger>
+export function getLogger(label: string) {
+  return {
+    debug: (...args: unknown[]) => console.debug(label, ...args),
+    info: (...args: unknown[]) => console.info(label, ...args),
+    log: (...args: unknown[]) => console.log(label, ...args),
+    warn: (...args: unknown[]) => console.warn(label, ...args),
+    error: (...args: unknown[]) => console.error(label, ...args),
+  }
 }

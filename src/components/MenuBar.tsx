@@ -12,6 +12,7 @@ export type Props = {
   gameState: t.ClientGameState
   onAddBotClick: AdminPanelProps['onAddBotClick']
   onStartGameClick: AdminPanelProps['onStartGameClick']
+  onRestartGameClick: () => void
 }
 
 function getSavedAdminPanelOpen(): boolean {
@@ -39,7 +40,56 @@ function getCenterElement(
       return <span>{label}</span>
     }
     case 'finished': {
-      return <span>{`${assertDefined(gameState.winners[0]).name} wins!`}</span>
+      return (
+        <span style={{ fontWeight: 'bold' }}>{`${
+          assertDefined(gameState.winners[0]).name
+        } wins! 🎉`}</span>
+      )
+    }
+  }
+}
+
+function getPlayIcon({
+  gameState,
+  onStartGameClick,
+  onRestartGameClick,
+}: {
+  gameState: t.ClientGameState
+  onStartGameClick: () => void
+  onRestartGameClick: () => void
+}): JSX.Element {
+  const style: React.CSSProperties = {
+    boxSizing: 'content-box',
+    padding: '10px',
+    width: '20px',
+    height: '20px',
+    zIndex: 10,
+  }
+
+  switch (gameState.stage) {
+    case 'setup':
+      return (
+        <img
+          className="cursor-pointer icon-hover"
+          onClick={onStartGameClick}
+          style={style}
+          src={`${process.env.PUBLIC_URL}/Play.svg`}
+          alt="Start game"
+          title="Start game"
+        />
+      )
+    case 'playing':
+    case 'finished': {
+      return (
+        <img
+          className="cursor-pointer icon-hover"
+          onClick={onRestartGameClick}
+          style={style}
+          src={`${process.env.PUBLIC_URL}/Restart.svg`}
+          alt="Restart game"
+          title="Restart game"
+        />
+      )
     }
   }
 }
@@ -49,6 +99,7 @@ export default function MenuBar({
   showAdmin,
   onAddBotClick,
   onStartGameClick,
+  onRestartGameClick,
   gameState,
 }: Props) {
   const [open, setOpen] = useState(getSavedAdminPanelOpen())
@@ -114,19 +165,7 @@ export default function MenuBar({
             src={`${process.env.PUBLIC_URL}/Settings.svg`}
             alt="Settings"
           />
-          <img
-            className="cursor-pointer icon-hover"
-            onClick={() => onStartGameClick()}
-            style={{
-              boxSizing: 'content-box',
-              padding: '10px',
-              width: '20px',
-              height: '20px',
-              zIndex: 10,
-            }}
-            src={`${process.env.PUBLIC_URL}/Play.svg`}
-            alt="Start game"
-          />
+          {getPlayIcon({ gameState, onStartGameClick, onRestartGameClick })}
         </div>
       ) : (
         <div

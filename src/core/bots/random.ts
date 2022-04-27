@@ -8,7 +8,9 @@ import {
 import { Client, createClient } from 'src/core/client'
 import { GameServer } from 'src/core/server'
 import * as t from 'src/gameTypes'
-import { loopUntilSuccess } from 'src/utils/utils'
+import { getLogger, loopUntilSuccess } from 'src/utils/utils'
+
+const logger = getLogger(`BOT (RANDOM):`)
 
 export async function connectBot(
   playerId: string,
@@ -19,6 +21,7 @@ export async function connectBot(
   const turnsReacted = new Set<number>()
   const client = await createClient({
     playerId,
+    logger,
     serverPeerId: server.peerId,
     onStateChange: async (state) => {
       gameState = state
@@ -43,7 +46,7 @@ export async function connectBot(
         async () => {
           await push(gameState, client)
         },
-        { maxTries: 5, onError: (err) => console.error('Unable to push', err) }
+        { maxTries: 5, onError: (err) => logger.error('Unable to push', err) }
       )
 
       await new Promise((resolve) => setTimeout(resolve, 800))
@@ -51,7 +54,7 @@ export async function connectBot(
         async () => {
           await move(gameState, client)
         },
-        { maxTries: 5, onError: (err) => console.error('Unable to move', err) }
+        { maxTries: 5, onError: (err) => logger.error('Unable to move', err) }
       )
     },
   })

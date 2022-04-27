@@ -18,33 +18,18 @@ import {
   removeRandomPiece,
 } from 'src/core/board'
 import { createInitialBoardPieces, createPieceBag } from 'src/core/pieces'
+import * as t from 'src/gameTypes'
 import {
-  Board,
   ConnectedPieces,
   FilledBoard,
   NonEmptyArray,
   Piece,
   PieceOnBoard,
 } from 'src/gameTypes'
+import { Logger } from 'src/utils/utils'
 
-/**
- * Allows algorithms to present some middle state via UI
- */
-export type UiForAlgorithm = {
-  setBoard: React.Dispatch<React.SetStateAction<Board>>
-  setBoardUi: React.Dispatch<
-    React.SetStateAction<
-      {
-        opacity: number
-      }[][]
-    >
-  >
-  markPieces: (pieces: PieceOnBoard[]) => void
-}
-
-export async function random({ setBoard }: UiForAlgorithm) {
+export async function random({ logger }: { logger: Logger }) {
   while (true) {
-    console.log('loop')
     const pieces = createPieceBag()
     const board = {
       pieces: createInitialBoardPieces() as FilledBoard['pieces'], // filled below
@@ -55,12 +40,10 @@ export async function random({ setBoard }: UiForAlgorithm) {
     })
     let tries = 0
 
-    for (let i = 0; i < 10000; ++i) {
-      setBoard(board)
-
+    while (true) {
       const offendingSubgraphs = findSubgraphsWithMoreThanXConnectedVertices(
         board,
-        2
+        4
       )
       const offendingCorners = getConnectedCornerNeighbors(board)
       const offending = _.uniqBy(
@@ -70,18 +53,17 @@ export async function random({ setBoard }: UiForAlgorithm) {
         (p) => `${p.position.x}-${p.position.y}`
       )
       if (offending.length === 0) {
-        setBoard(board)
-        console.log('found')
-        return board
+        return {
+          board,
+          pieceBag: pieces,
+        }
       }
 
       // When there are offending subgraphs, we know they contain pieces
       const random = assertDefined(randomFreePieceToRotate([offending]))
       changeRandomPiece(board, pieces, [random])
-      // rotatePiece(board, random.position)
 
       // If no solutions have been found for a while, start removing random other pieces
-
       if (tries > 200) {
         const candidates = _.flatten(board.pieces)
           .filter((p) => isPieceOnBoard(p) && !isLockedPiece(p.position))
@@ -107,70 +89,16 @@ export async function random({ setBoard }: UiForAlgorithm) {
   }
 }
 
-/*
-export async function systematic({ setBoard }: UiForAlgorithm) {
-  let board: BoardType
-  let pieces: Piece[]
-
-  do {
-    console.log('new loop')
-    pieces = createPieceBag()
-    board = createInitialBoardPieces()
-    let placementTries = 0
-
-    while (emptyPiecesCount(board) > 0) {
-      // To make the algorithm async
-      await new Promise((resolve) => setTimeout(resolve, 5))
-      setBoard([...board])
-
-      // Since the board has empty slots -> pieces array must be non-empty
-      // as there will always be one piece left even after complete filling
-      const index = getWeightedRandomPieceIndex(
-        pieces as NonEmptyArray<Piece>
-      )
-      const piece = popIndex(pieces as NonEmptyArray<Piece>, index)
-      const addedPiece = addPiece(board, piece)
-
-      setBoard([...board])
-
-      const offending = findSubgraphsWithMoreThanXConnectedVertices(board, 2)
-      const cornerOffenders = getConnectedCornerNeighbors(board)
-      const offendingShufflable = _.flatten(offending)
-        .concat(cornerOffenders)
-        .filter((p) => !isLockedPiece(p.position))
-
-      if (offending.length === 0 && cornerOffenders.length) {
-        console.log('Piece ok')
-        placementTries = 0
-        continue
-      } else {
-        console.log('Piece placement not ok, trying again..')
-        // Otherwise revert the last addition and try again
-        const { position: _position, ...removedPiece } = assertDefined(
-          removePiece(board, addedPiece.position)
-        )
-        setBoard([...board])
-        pieces.push(removedPiece)
-        placementTries++
-      }
-
-      if (placementTries > 100) {
-        console.log('Too many retries for one piece, starting over')
-        // The situation seems stalled, try again
-        break
-      }
-    }
-
-    setBoard(board)
-  } while (emptyPiecesCount(board) > 0)
-}
-*/
-
-export async function systematic2({ setBoard }: UiForAlgorithm) {
+export async function systematicRandom({
+  logger,
+  level,
+}: {
+  logger: Logger
+  level: t.ShuffleLevel
+}) {
   const pieces = createPieceBag()
   const board = {
     pieces: createInitialBoardPieces() as FilledBoard['pieces'], // filled below
-    playerPositions: {},
   }
 
   const maxBuffer = 10
@@ -178,8 +106,7 @@ export async function systematic2({ setBoard }: UiForAlgorithm) {
 
   while (emptyPiecesCount(board) > 0) {
     // To make the algorithm async
-    await new Promise((resolve) => setTimeout(resolve, 10))
-    setBoard(board)
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
     // Since the board has empty slots -> pieces array must be non-empty
     // as there will always be one piece left even after complete filling
@@ -193,9 +120,10 @@ export async function systematic2({ setBoard }: UiForAlgorithm) {
     let foundSolution = false
 
     for (let tries = 0; tries < 50; ++tries) {
-      setBoard(board)
-
-      offendingSubgraphs = findSubgraphsWithMoreThanXConnectedVertices(board, 2)
+      offendingSubgraphs = findSubgraphsWithMoreThanXConnectedVertices(
+        board,
+        levelToConnectedCount(level)
+      )
       offendingCorners = getConnectedCornerNeighbors(board)
       offendingChangeable = _.uniqBy(
         _.flatten(offendingSubgraphs)
@@ -205,14 +133,11 @@ export async function systematic2({ setBoard }: UiForAlgorithm) {
       )
 
       if (offendingSubgraphs.length === 0 && offendingCorners.length === 0) {
-        console.log('Piece ok')
         foundSolution = true
         break
       } else {
-        console.log('Piece placement not ok, trying again..')
         // Otherwise revert the last addition and try again
         changeRandomPiece(board, pieces, offendingChangeable)
-        setBoard(board)
       }
     }
 
@@ -221,8 +146,6 @@ export async function systematic2({ setBoard }: UiForAlgorithm) {
       continue
     }
 
-    // markPieces(offendingChangeable!)
-    // console.log(offendingChangeable!)
     offendingChangeable!.forEach((offendingPiece) => {
       const { position: _position, ...removedPiece } = assertDefined(
         removePiece(board, offendingPiece.position)
@@ -239,29 +162,28 @@ export async function systematic2({ setBoard }: UiForAlgorithm) {
           removeRandomPiece(board)
         pieces.push(removedPiece)
       })
-      console.log('EXTRA piece removed to unblock stalled iteration')
+      logger.debug('Extra piece removed to unblock stalled shuffle iteration')
       noSolutions.clear()
     } else {
       noSolutions.push(1)
     }
   }
 
-  return board
-
-  /*
-  setBoard(board)
-
-  while (true) {
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    const extra = pushWithPiece(
-      board,
-      { x: 1, y: 0, direction: 'down' },
-      assertDefined(pieces.pop())
-    )
-    pieces.push(extra)
-    setBoard(board)
+  return {
+    board,
+    pieceBag: pieces,
   }
-  */
 }
 
-export default Board
+const levelToConnectedCount = (l: t.ShuffleLevel) => {
+  switch (l) {
+    case 'easy':
+      return 7
+    case 'medium':
+      return 4
+    case 'hard':
+      return 3
+    case 'perfect':
+      return 2
+  }
+}

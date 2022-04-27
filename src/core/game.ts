@@ -1,11 +1,11 @@
 import _ from 'lodash'
+import * as algo from 'src/core/algorithms'
 import {
   assertDefined,
   getOppositePushPosition,
   getPieceAt,
   isValidPlayerMove,
   pushWithPiece,
-  randomFillBoard,
 } from 'src/core/board'
 import {
   createDeck as createCardDeck,
@@ -14,35 +14,57 @@ import {
   createPlayerColors,
 } from 'src/core/pieces'
 import * as t from 'src/gameTypes'
-import { format } from 'src/utils/utils'
+import { format, getLogger } from 'src/utils/utils'
+
+const logger = getLogger('SERVER:')
 
 export type CreateGameOptions = {
   onStateChange?: (game: t.Game) => void
   cardsPerPlayer?: number
 }
 
-export function createGame(opts: CreateGameOptions) {
+export async function createGame(opts: CreateGameOptions) {
   const onStateChange = opts.onStateChange ?? (() => undefined)
   const cardsPerPlayer = opts.cardsPerPlayer ?? 5
 
-  const deck = createCardDeck()
-  const gameState: Readonly<t.Game> = {
-    stage: 'setup',
-    cards: deck,
-    pieceBag: createPieceBag(),
-    board: {
-      pieces: createInitialBoardPieces(),
-    },
-    playerColors: createPlayerColors(),
-    players: [],
-    playerWhoStarted: 0,
-    playerTurn: 0,
-    playerHasPushed: false,
-    winners: [],
-    previousPushPosition: undefined,
-    turnCounter: 0,
+  // Note: Many other functions rely on object reference pointers.
+  //       It is safe to do the shuffle before game starts, but after
+  //       that it breaks the references.
+  const shuffleBoard = mutator(async (level: t.ShuffleLevel) => {
+    const game = stageGuard(['setup'])
+
+    const shuffleFn = algo.systematicRandom
+    const { board, pieceBag } = await shuffleFn({ logger, level })
+    game.board = board
+    if (pieceBag.length !== 1) {
+      throw new Error('Unexpected amount of pieces in bag')
+    }
+    game.pieceBag = pieceBag as [t.Piece]
+  })
+
+  function createInitialState() {
+    const deck = createCardDeck()
+    const initial: Readonly<t.Game> = {
+      stage: 'setup',
+      cards: deck,
+      pieceBag: createPieceBag(),
+      board: {
+        pieces: createInitialBoardPieces(),
+      },
+      playerColors: createPlayerColors(),
+      players: [],
+      playerWhoStarted: 0,
+      playerTurn: 0,
+      playerHasPushed: false,
+      winners: [],
+      previousPushPosition: undefined,
+      turnCounter: 0,
+    }
+    return initial
   }
-  randomFillBoard(gameState.board, { pieceBag: gameState.pieceBag })
+
+  const gameState = createInitialState()
+  await shuffleBoard('hard')
 
   /**
    * Helper function to ensure a state mutation is reflected to callback.
@@ -50,10 +72,11 @@ export function createGame(opts: CreateGameOptions) {
    * for no obvious upside in this case.
    */
   function mutator<ArgsT extends unknown[], ReturnT>(
-    fn: (...args: ArgsT) => ReturnT
-  ): (...args: ArgsT) => ReturnT {
-    return (...args: ArgsT) => {
-      const val = fn(...args)
+    fn: (...args: ArgsT) => Promise<ReturnT> | ReturnT
+  ): (...args: ArgsT) => Promise<ReturnT> | ReturnT {
+    return async (...args: ArgsT) => {
+      const val = await fn(...args)
+      // TODO: How to prevent nested mutator calls to emit state change n times
       onStateChange(gameState)
       return val
     }
@@ -96,7 +119,7 @@ export function createGame(opts: CreateGameOptions) {
     game.stage = 'playing'
     // Choose random player to start
     game.playerTurn = assertDefined(_.sample(_.times(game.players.length)))
-    console.log('Random starting player is', game.players[game.playerTurn].name)
+    logger.log('Random starting player is', game.players[game.playerTurn].name)
     game.playerWhoStarted = game.playerTurn
 
     const corners = _.shuffle<t.Position>([
@@ -107,6 +130,34 @@ export function createGame(opts: CreateGameOptions) {
     ])
     game.players.forEach((player) => {
       setPlayerPosition(player.id, assertDefined(corners.pop()))
+
+      // Deal cards
+      player.cards = _.times(cardsPerPlayer).map(() =>
+        assertDefined(gameState.cards.pop())
+      )
+    })
+  })
+
+  const restart = mutator(async () => {
+    const game = gameState as t.Game
+    const gameAny = game as any
+
+    // Reset all values to initial state
+    const {
+      players: _players,
+      playerColors: _playerColors,
+      ...initial
+    } = createInitialState()
+    const keys = Object.keys(initial) as Array<keyof typeof initial>
+    keys.forEach((key) => {
+      gameAny[key] = initial[key]
+    })
+
+    await shuffleBoard('hard')
+
+    // Remove added state from players
+    game.players.forEach((player) => {
+      player.cards = []
     })
   })
 
@@ -123,20 +174,16 @@ export function createGame(opts: CreateGameOptions) {
 
   const addPlayer = mutator(
     (player: Pick<t.Player, 'id'> & { name?: string }) => {
-      const game = stageGuard([
-        'setup',
-        'playing',
-        'finished' /* todo: remove other stages*/,
-      ])
+      // Does it make sense for someone to join mid-game?
+      // Why not though..
+      const game = stageGuard(['setup', 'playing'])
 
       if (game.players.length >= 4 || gameState.playerColors.length === 0) {
         throw new Error('Max players already joined')
       }
 
       const p = player as t.Player
-      p.cards = _.times(cardsPerPlayer).map(() =>
-        assertDefined(gameState.cards.pop())
-      )
+      p.cards = []
       p.color = assertDefined(gameState.playerColors.pop())
       p.name = player.name ?? `Player ${game.players.length + 1}`
       game.players.push(p)
@@ -243,7 +290,7 @@ export function createGame(opts: CreateGameOptions) {
 
   const setExtraPieceRotationByPlayer = mutator(
     (playerId: string, rotation: t.Rotation) => {
-      const game = stageGuard(['setup', 'playing'])
+      const game = stageGuard(['playing'])
 
       if (![0, 90, 180, 270].includes(rotation)) {
         throw new Error(`Invalid rotation: ${rotation}`)
@@ -271,7 +318,7 @@ export function createGame(opts: CreateGameOptions) {
     const foundCard = currentCards.find((c) => c.trophy === piece.trophy)
     if (piece.trophy && foundCard) {
       foundCard.found = true
-      console.log(`Player ${player.id} found trophy ${piece.trophy}`)
+      logger.log(`Player ${player.id} found trophy ${piece.trophy}`)
     }
   })
 
@@ -336,7 +383,9 @@ export function createGame(opts: CreateGameOptions) {
 
   return {
     getState: () => gameState as t.Game,
+    restart,
     start,
+    shuffleBoard,
     addPlayer,
     getPlayerById,
     removePlayer,

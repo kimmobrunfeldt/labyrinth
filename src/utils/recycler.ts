@@ -1,16 +1,18 @@
 import _ from 'lodash'
-import { sleep } from 'src/utils/utils'
+import { Logger, sleep } from 'src/utils/utils'
 
 export type RecyclerOpts<T> = {
   factory: () => Promise<T>
   destroyer: (current: T) => Promise<void>
   autoRecycle?: (current: T, recycleCb: () => void) => void
   retryInterval?: number
+  logger?: Logger
 }
 
 export type Recycler<T> = {
   current: T
   recycle: () => Promise<void>
+  stop: () => Promise<void>
 }
 
 /**
@@ -19,7 +21,7 @@ export type Recycler<T> = {
  *
  * Example usage:
  *
- * const { current, recycle } = await createRecycler({
+ * const { current, recycle, stop } = await createRecycler({
  *   factory: async () => {
  *     const conn = await createDifficultConnection()
  *     return conn
@@ -42,24 +44,31 @@ export async function createRecycler<T>({
   destroyer,
   autoRecycle,
   retryInterval = 5000,
+  logger = console,
 }: RecyclerOpts<T>): Promise<Recycler<T>> {
+  let stopRecycle = false
   let current = await factory()
   initAutoRecycleTrigger(current)
 
   async function recycle() {
-    console.log('Recycling ...')
+    logger.log('Recycling ...')
     await destroyer(current)
-    while (true) {
+    while (!stopRecycle) {
       try {
         current = await factory()
         initAutoRecycleTrigger(current)
         break
       } catch (err) {
-        console.warn('Recycler failed to re-create', err)
+        logger.warn('Recycler failed to re-create', err)
       }
 
       await sleep(retryInterval)
     }
+  }
+
+  async function stop() {
+    stopRecycle = true
+    await destroyer(current)
   }
 
   function initAutoRecycleTrigger(obj: T) {
@@ -83,5 +92,6 @@ export async function createRecycler<T>({
       }
     ) as T,
     recycle,
+    stop,
   }
 }

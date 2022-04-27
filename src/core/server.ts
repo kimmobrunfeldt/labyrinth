@@ -9,11 +9,14 @@ import { createRecycler } from 'src/utils/recycler'
 import { PeerJsTransportClient } from 'src/utils/TransportClient'
 import { PeerJsTransportServer } from 'src/utils/TransportServer'
 import {
+  getLogger,
   getRandomAdminToken,
   sleep,
   waitForEvent,
   wrapWithLogging,
 } from 'src/utils/utils'
+
+const logger = getLogger('SERVER:')
 
 export const TURN_TIMEOUT_SECONDS = 60
 export const CHECK_TURN_END_INTERVAL_SECONDS = 0.5
@@ -27,8 +30,6 @@ export async function createServer(
   opts: CreateGameOptions & { peerId?: string } = {}
 ): Promise<GameServer> {
   const { peerId, ...gameOpts } = opts
-  const game = createGame({ ...gameOpts, onStateChange: sendStateToEveryone })
-  const adminToken = getRandomAdminToken()
   const players: Record<
     string,
     {
@@ -37,11 +38,16 @@ export async function createServer(
       status: 'connected' | 'disconnected'
     }
   > = {}
+  const game = await createGame({
+    ...gameOpts,
+    onStateChange: sendStateToEveryone,
+  })
+  const adminToken = getRandomAdminToken()
 
   const network = await createServerNetworking({
     peerId,
-    onClientConnect: (playerId, connection) => {
-      console.log(`Player '${playerId}' connected`)
+    onClientConnect: async (playerId, connection) => {
+      logger.log(`Player '${playerId}' connected`)
       const server = new MoleServer({
         transports: [],
       })
@@ -75,49 +81,60 @@ export async function createServer(
         push: async (pushPos: t.PushPosition) =>
           game.pushByPlayer(playerId, pushPos),
         ...wrapAdminMethods(
-          { start, promote: async () => game.promotePlayer(playerId) },
+          {
+            start,
+            restart,
+            promote: async () => game.promotePlayer(playerId),
+            shuffleBoard: async (level: t.ShuffleLevel) => {
+              await game.shuffleBoard(level)
+            },
+          },
           adminToken
         ),
       }
-      server.expose(wrapWithLogging(`Game client ${playerId}`, serverRpc))
+      const rpcLogger = getLogger(`SERVER RPC (${playerId}):`)
+      server.expose(wrapWithLogging(rpcLogger, serverRpc))
       server.registerTransport(
         new PeerJsTransportServer({
           peerConnection: connection,
         })
       )
-      const client = new MoleClient({
+      const client: t.PromisifyMethods<t.ClientRpcAPI> = new MoleClient({
         requestTimeout: 60 * 1000,
         transport: new PeerJsTransportClient({ peerConnection: connection }),
       })
       try {
         if (!(playerId in players)) {
+          players[playerId] = {
+            client,
+            connection,
+            status: 'connected',
+          }
           game.addPlayer({ id: playerId })
         }
       } catch (err) {
         // Close connection max players joined
-        console.warn('Client join failed:', err)
+        logger.warn('Adding player failed:', err)
+        delete players[playerId]
+
+        await client.onServerFull()
         connection.close()
         return
       }
-
-      players[playerId] = {
-        client,
-        connection,
-        status: 'connected',
-      }
     },
     onClientDisconnect: async (playerId) => {
-      console.log(`Player '${playerId}' disconnected`)
+      logger.log(`Player '${playerId}' disconnected`)
 
-      if (playerId in players) {
-        if (game.getState().stage !== 'setup') {
-          players[playerId].status = 'disconnected'
-        } else {
-          delete players[playerId]
-          game.removePlayer(playerId)
+      if (!(playerId in players)) {
+        return
+      }
 
-          await sendStateToEveryone()
-        }
+      if (game.getState().stage !== 'setup') {
+        players[playerId].status = 'disconnected'
+        await sendStateToEveryone()
+      } else {
+        delete players[playerId]
+        game.removePlayer(playerId)
       }
     },
   })
@@ -165,7 +182,10 @@ export async function createServer(
           })
         ),
       },
-      players: state.players.map(censorPlayer),
+      players: state.players.map((p) => ({
+        ...censorPlayer(p),
+        status: players[p.id].status,
+      })),
       me: censorPlayer(game.getPlayerById(playerId)),
       myCurrentCards: game.getPlayersCurrentCards(playerId),
       myPosition:
@@ -175,22 +195,27 @@ export async function createServer(
     }
   }
 
+  async function restart() {
+    game.restart()
+    await sendStateToEveryone()
+  }
+
   async function start() {
     game.start()
     await sendStateToEveryone()
 
     initiateGameLoop()
       .then(sendStateToEveryone)
-      .then(() => console.log('Game finished!'))
+      .then(() => logger.log('Game loop ended!'))
   }
 
   async function initiateGameLoop() {
-    while (game.getState().stage !== 'finished') {
+    while (game.getState().stage === 'playing') {
       try {
         await turn()
       } catch (e) {
-        console.warn(e)
-        console.warn('Skipping turn')
+        logger.warn(e)
+        logger.warn('Skipping turn')
         game.nextTurn()
       }
     }
@@ -198,7 +223,8 @@ export async function createServer(
 
   async function turn() {
     const player = game.whosTurn()
-    console.log('Turn by', player.name)
+    logger.log('Turn by', player.name)
+    const turnCounterNow = game.getState().turnCounter
 
     for (
       let i = 0;
@@ -207,8 +233,18 @@ export async function createServer(
     ) {
       await sleep(CHECK_TURN_END_INTERVAL_SECONDS * 1000)
 
-      if (game.whosTurn().id !== player.id) {
-        console.log('Player', player.name, 'has finished their turn')
+      if (game.getState().stage === 'setup') {
+        logger.log('Game has restarted!')
+        return
+      }
+
+      if (game.getState().stage === 'finished') {
+        logger.log('Game finished, turn ended!')
+        return
+      }
+
+      if (turnCounterNow !== game.getState().turnCounter) {
+        logger.log('Player', player.name, 'has finished their turn')
         return
       }
     }
@@ -230,6 +266,7 @@ export type CreateServerNetworkingOptions = {
 
 async function createServerNetworking(opts: CreateServerNetworkingOptions) {
   const recycler = await createRecycler({
+    logger,
     factory: async () => await _createServerNetworking(opts),
     destroyer: async (current) => current.destroy(),
     autoRecycle: (newCurrent, cb) => {
@@ -254,9 +291,9 @@ async function _createServerNetworking(
       iceServers,
     },
   })
-  peer.on('error', (err) => console.error(err))
+  peer.on('error', (err) => logger.error(err))
   peer.on('open', (openPeerId) => {
-    console.log('Server open with peer id', openPeerId)
+    logger.log('Server open with peer id', openPeerId)
 
     peer.on('connection', (conn) => {
       const playerId = conn.metadata.id
@@ -281,16 +318,19 @@ async function _createServerNetworking(
   }
 }
 
-function wrapAdminMethods<
-  T extends { [key: string]: (...args: unknown[]) => unknown }
->(methods: T, serverAdminToken: string): T {
+function wrapAdminMethods<T extends { [key: string]: (...args: any[]) => any }>(
+  methods: T,
+  serverAdminToken: string
+): {
+  [K in keyof T]: (token: string, ...args: Parameters<T[K]>) => ReturnType<T[K]>
+} {
   return _.mapValues(methods, (fn) => {
-    return (token: string, ...args: unknown[]) => {
+    return (token: string, ...args: any[]) => {
       if (token !== serverAdminToken) {
         throw new Error('Admin command not authorized')
       }
 
       return fn(...args)
     }
-  }) as T
+  })
 }

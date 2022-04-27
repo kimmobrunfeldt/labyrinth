@@ -5,10 +5,15 @@ import Peer from 'peerjs'
 import retryify from 'promise-retryify'
 import * as t from 'src/gameTypes'
 import { debugLevel, iceServers } from 'src/peerConfig'
-import { createRecycler } from 'src/utils/recycler'
+import { createRecycler, Recycler } from 'src/utils/recycler'
 import { PeerJsTransportClient } from 'src/utils/TransportClient'
 import { PeerJsTransportServer } from 'src/utils/TransportServer'
-import { waitForEvent, wrapWithLogging } from 'src/utils/utils'
+import {
+  getLogger,
+  Logger,
+  waitForEvent,
+  wrapWithLogging,
+} from 'src/utils/utils'
 
 export type ClientOptions = {
   playerId: string
@@ -19,6 +24,9 @@ export type ClientOptions = {
   onPeerConnectionOpen?: () => void
   onStateChange: t.PromisifyMethods<t.ClientRpcAPI>['onStateChange']
   onPushPositionHover?: t.PromisifyMethods<t.ClientRpcAPI>['onPushPositionHover']
+  onMessage?: t.PromisifyMethods<t.ClientRpcAPI>['onMessage']
+  onServerFull?: t.PromisifyMethods<t.ClientRpcAPI>['onServerFull']
+  logger: Logger
 }
 
 export type Client = Awaited<ReturnType<typeof createClient>>
@@ -34,16 +42,26 @@ export type Client = Awaited<ReturnType<typeof createClient>>
  * It will break the proxy mechanism without nested proxies implementation.
  */
 export async function createClient(opts: ClientOptions) {
-  const recycler = await createRecycler({
-    factory: async () => await _createClient(opts),
-    destroyer: async (current) => current.destroy(),
-    autoRecycle: (newCurrent, cb) => {
-      newCurrent.peer.on('disconnected', cb)
-      newCurrent.peer.on('error', cb)
-      newCurrent.connection.on('error', cb)
-      newCurrent.connection.on('close', cb)
-    },
-  })
+  const recycler: Recycler<Awaited<ReturnType<typeof _createClient>>> =
+    await createRecycler({
+      logger: opts.logger,
+      factory: async () =>
+        await _createClient({
+          ...opts,
+          onServerFull: async () => {
+            opts.logger.warn('Server was full! Stopping client recycling ...')
+            await recycler.stop()
+            opts.logger.log('Stopped.')
+          },
+        }),
+      destroyer: async (current) => current.destroy(),
+      autoRecycle: (newCurrent, cb) => {
+        newCurrent.peer.on('disconnected', cb)
+        newCurrent.peer.on('error', cb)
+        newCurrent.connection.on('error', cb)
+        newCurrent.connection.on('close', cb)
+      },
+    })
 
   return recycler.current
 }
@@ -98,12 +116,14 @@ function createRpc(conn: Peer.DataConnection, opts: ClientOptions) {
   })
 
   const clientRpcApi: t.PromisifyMethods<t.ClientRpcAPI> = {
-    // Don't require this for bot clients
+    // Don't require thesefor bot clients
+    onMessage: opts.onMessage ?? (async () => undefined),
     onPushPositionHover: opts.onPushPositionHover ?? (async () => undefined),
     onStateChange: opts.onStateChange,
+    onServerFull: opts.onServerFull ?? (async () => undefined),
   }
-
-  clientServer.expose(wrapWithLogging('server', clientRpcApi))
+  const rpcLogger = getLogger(`CLIENT RPC:`)
+  clientServer.expose(wrapWithLogging(rpcLogger, clientRpcApi))
   clientServer.registerTransport(
     new PeerJsTransportServer({ peerConnection: conn })
   )
@@ -125,7 +145,9 @@ function createRpc(conn: Peer.DataConnection, opts: ClientOptions) {
     move: (...args) => client.move(...args),
     push: (...args) => client.push(...args),
     start: (...args) => client.start(...args),
+    restart: (...args) => client.restart(...args),
     promote: (...args) => client.promote(...args),
+    shuffleBoard: (...args) => client.shuffleBoard(...args),
   }
 
   const retryClient = retryify(clientObj, {
@@ -136,12 +158,12 @@ function createRpc(conn: Peer.DataConnection, opts: ClientOptions) {
       return err instanceof X.RequestTimeout
     },
     beforeRetry: async (retryCount) => {
-      console.log(`Retrying request to server attempt ${retryCount} ...`)
+      opts.logger.log(`Retrying request to server attempt ${retryCount} ...`)
     },
     onAllFailed: (err) => {
       if (err instanceof X.RequestTimeout) {
-        console.error('All retry attempts failed', err)
-        console.log('Closing connection')
+        opts.logger.error('All retry attempts failed', err)
+        opts.logger.log('Closing connection')
         conn.close()
       }
     },

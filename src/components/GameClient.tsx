@@ -2,6 +2,7 @@ import _ from 'lodash'
 import React, { useEffect, useRef, useState } from 'react'
 import BoardComponent from 'src/components/Board'
 import MenuBar from 'src/components/MenuBar'
+import { RotateIcon } from 'src/components/RotateIcon'
 import { getNewRotation } from 'src/core/board'
 import { connectBot } from 'src/core/bots/random'
 import { createClient } from 'src/core/client'
@@ -13,7 +14,7 @@ import {
   UIPushPosition,
   uiPushPositionToBoard,
 } from 'src/utils/uiUtils'
-import { uuid } from 'src/utils/utils'
+import { getLogger, uuid } from 'src/utils/utils'
 import './App.css'
 
 type Props = {
@@ -52,6 +53,7 @@ export const GameClient = (props: Props) => {
   const [pushPositionHover, setPushPositionHover] = useState<
     UIPushPosition | undefined
   >(undefined)
+  const [messages, setMessages] = useState<string[]>([])
   const bots = useRef<Array<Awaited<ReturnType<typeof createClient>>>>([])
 
   useEffect(() => {
@@ -65,6 +67,7 @@ export const GameClient = (props: Props) => {
 
       const client = await createClient({
         playerId,
+        logger: getLogger(`CLIENT:`),
         serverPeerId,
         onPeerError: (err) => {
           setError(err)
@@ -87,6 +90,13 @@ export const GameClient = (props: Props) => {
             ? boardPushPositionToUIPosition(boardPos)
             : undefined
           setPushPositionHover(uiPos)
+        },
+        onServerFull: async () => {
+          setError(new Error('Game server full'))
+        },
+        onMessage: async (msg) => {
+          console.log('msg', msg)
+          setMessages([...messages, msg])
         },
       })
       if (adminToken) {
@@ -167,6 +177,31 @@ export const GameClient = (props: Props) => {
     await client.client.start(adminToken)
   }
 
+  async function onRestartGameClick() {
+    if (!client || !adminToken || !gameState) {
+      return
+    }
+
+    if (
+      gameState.stage === 'playing' &&
+      process.env.NODE_ENV !== 'development'
+    ) {
+      const userConfirmed = window.confirm('Restart game?')
+      if (!userConfirmed) {
+        return
+      }
+    }
+
+    await client.client.restart(adminToken)
+  }
+
+  async function onShuffleBoardClick() {
+    if (!client || !adminToken) {
+      return
+    }
+    await client.client.shuffleBoard(adminToken, 'hard')
+  }
+
   const containerProps = {
     ...props,
     gameState,
@@ -191,51 +226,90 @@ export const GameClient = (props: Props) => {
         showAdmin={!_.isUndefined(adminToken)}
         onAddBotClick={onAddBot}
         onStartGameClick={onStartGameClick}
+        onRestartGameClick={onRestartGameClick}
         serverPeerId={serverPeerId}
       />
 
       <Container {...containerProps}>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            position: 'absolute',
-            top: '10px',
-            right: '0',
-            textAlign: 'center',
-          }}
-        >
-          <div style={{ fontWeight: 'bold', color: '#555' }}>NEXT</div>
-          <img
+        {gameState.stage !== 'setup' && myNextCard && (
+          <CurrentTrophy trophy={myNextCard.trophy} />
+        )}
+        <BoardComponent
+          gameState={gameState}
+          extraPiece={gameState.pieceBag[0]}
+          players={gameState.players}
+          board={gameState.board}
+          onMove={onMove}
+          onPush={onPush}
+          onClickExtraPiece={onClickExtraPiece}
+          previousPushPosition={gameState.previousPushPosition}
+          pushPositionHover={pushPositionHover}
+          onPushPositionHover={onPushPositionHover}
+          isMyTurn={isMyTurn()}
+          playerHasPushed={gameState.playerHasPushed}
+          playerInTurn={gameState.players[gameState.playerTurn]}
+        />
+
+        {gameState.stage === 'setup' && (
+          <div
             style={{
-              position: 'relative',
-              top: '-8px',
-              width: '70px',
+              userSelect: 'none',
+              position: 'absolute',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              width: '100%',
+              height: '100%',
             }}
-            src={`${process.env.PUBLIC_URL}/pieces/${myNextCard.trophy}.svg`}
-            alt={myNextCard.trophy}
-          />
-        </div>
-        {gameState && (
-          <BoardComponent
-            gameState={gameState}
-            extraPiece={gameState.pieceBag[0]}
-            players={gameState.players}
-            board={gameState.board}
-            onMove={onMove}
-            onPush={onPush}
-            onClickExtraPiece={onClickExtraPiece}
-            previousPushPosition={gameState.previousPushPosition}
-            pushPositionHover={pushPositionHover}
-            onPushPositionHover={onPushPositionHover}
-            isMyTurn={isMyTurn()}
-            playerHasPushed={gameState.playerHasPushed}
-            playerInTurn={gameState.players[gameState.playerTurn]}
-          />
+          >
+            <div
+              title="Shuffle board"
+              onClick={onShuffleBoardClick}
+              className="icon-hover"
+              style={{
+                cursor: 'pointer',
+                position: 'absolute',
+                zIndex: 10,
+                width: '10%',
+                maxWidth: '60px',
+              }}
+            >
+              <RotateIcon
+                fill="#454545"
+                style={{
+                  width: '100%',
+                }}
+              />
+            </div>
+          </div>
         )}
       </Container>
     </div>
   )
 }
+
+const CurrentTrophy = ({ trophy }: { trophy: t.Trophy }) => (
+  <div
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      position: 'absolute',
+      top: '8px',
+      right: '0',
+      textAlign: 'center',
+    }}
+  >
+    <div style={{ fontWeight: 'bold', color: '#555' }}>NEXT</div>
+    <img
+      style={{
+        position: 'relative',
+        top: '-15px',
+        width: '70px',
+      }}
+      src={`${process.env.PUBLIC_URL}/pieces/${trophy}.svg`}
+      alt={trophy}
+    />
+  </div>
+)
 
 export default GameClient
