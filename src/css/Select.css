@@ -46,12 +46,13 @@
 .Select:disabled,
 .Select[aria-disabled="true"] {
   cursor: not-allowed;
-  background-color: rgba(211, 211, 211, 0.75);
+  background-color: rgba(211, 211, 211, 0.6);
+  border-color: #aaa;
 }
 
 .Select:disabled:hover,
 .Select[aria-disabled="true"]:hover {
-  border-color: #999;
+  border-color: #aaa;
 }
 
 .Select .Select--placeholder {

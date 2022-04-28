@@ -5,8 +5,10 @@ import * as t from 'src/gameTypes'
 export type Props = {
   open: boolean
   onStartGameClick: () => void
+  onRestartGameClick: () => void
   onAddBot: (name: t.BotName) => void
   onRemovePlayer: (id: t.Player['id']) => void
+  onSettingsChange: (settings: Partial<t.GameSettings>) => void
   gameState: t.ClientGameState
   onCloseClick: () => void
 }
@@ -14,9 +16,11 @@ export type Props = {
 const AdminPanel = ({
   open,
   onStartGameClick,
+  onRestartGameClick,
   gameState,
   onAddBot,
   onRemovePlayer,
+  onSettingsChange,
   onCloseClick,
 }: Props) => {
   const startDisabled = Boolean(gameState && gameState.stage !== 'setup')
@@ -88,26 +92,61 @@ const AdminPanel = ({
               </h2>
 
               <div style={{ paddingTop: '10px', paddingBottom: '20px' }}>
-                <h3
-                  style={{
-                    fontSize: '14px',
-                    color: '#857E77',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Game
-                </h3>
+                <Subtitle>Settings</Subtitle>
+                <div style={{ marginTop: '15px' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: '6px',
+                      fontSize: '14px',
+                      color: '#666',
+                    }}
+                  >
+                    Trophies to find
+                  </label>
+                  <Select
+                    disabled={gameState.stage !== 'setup'}
+                    value={String(gameState.settings.trophyCount)}
+                    onChange={(value) =>
+                      onSettingsChange({ trophyCount: Number(value) })
+                    }
+                    options={[
+                      { value: '1', label: '1 trophy' },
+                      { value: '3', label: '3 trophies' },
+                      { value: '5', label: '5 trophies' },
+                    ]}
+                  />
+                </div>
+                <div style={{ marginTop: '15px' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: '6px',
+                      fontSize: '14px',
+                      color: '#666',
+                    }}
+                  >
+                    Board shuffle level
+                  </label>
+                  <Select
+                    disabled={gameState.stage !== 'setup'}
+                    value={gameState.settings.shuffleLevel}
+                    onChange={(value) =>
+                      onSettingsChange({
+                        shuffleLevel: value as t.ShuffleLevel,
+                      })
+                    }
+                    options={[
+                      { value: 'easy', label: 'Casual ' },
+                      { value: 'hard', label: 'Intermediate' },
+                      { value: 'perfect', label: 'Perfect (slow)' },
+                    ]}
+                  />
+                </div>
               </div>
+
               <div style={{ padding: '20px 0 0 0' }}>
-                <h3
-                  style={{
-                    fontSize: '14px',
-                    color: '#857E77',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Players
-                </h3>
+                <Subtitle>Players</Subtitle>
                 {gameState.players.map((p) => {
                   return (
                     <div
@@ -134,7 +173,10 @@ const AdminPanel = ({
                             marginRight: '8px',
                           }}
                         />
-                        {p.name}
+                        <span>{p.name}</span>
+                        <span style={{ marginLeft: '3px' }}>
+                          {p.id === gameState.me.id ? ' (host)' : ''}
+                        </span>
                       </div>
                       {gameState.stage === 'setup' && p.id !== gameState.me.id && (
                         <div
@@ -174,11 +216,14 @@ const AdminPanel = ({
               }}
             >
               <button
-                disabled={startDisabled}
                 className="button-50 button-50-small"
-                onClick={onStartGameClick}
+                onClick={
+                  gameState.stage === 'setup'
+                    ? onStartGameClick
+                    : onRestartGameClick
+                }
               >
-                Start game
+                {gameState.stage === 'setup' ? 'Start game' : 'Restart game'}
               </button>
             </div>
           </div>
@@ -187,4 +232,17 @@ const AdminPanel = ({
     </>
   )
 }
+
+const Subtitle = ({ children }: { children: React.ReactNode }) => (
+  <h3
+    style={{
+      fontSize: '15px',
+      // letterSpacing: '-0.01rem',
+      color: '#857E77',
+      textTransform: 'uppercase',
+    }}
+  >
+    {children}
+  </h3>
+)
 export default AdminPanel

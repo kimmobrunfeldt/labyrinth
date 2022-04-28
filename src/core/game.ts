@@ -30,11 +30,14 @@ export function createGame(opts: CreateGameOptions) {
   // Note: Many other functions rely on object reference pointers.
   //       It is safe to do the shuffle before game starts, but after
   //       that it breaks the references.
-  const shuffleBoard = mutator((level: t.ShuffleLevel) => {
+  const shuffleBoard = mutator((level?: t.ShuffleLevel) => {
     const game = stageGuard(['setup'])
 
     const shuffleFn = algo.systematicRandom
-    const { board, pieceBag } = shuffleFn({ logger, level })
+    const { board, pieceBag } = shuffleFn({
+      logger,
+      level: level ?? game.settings.shuffleLevel,
+    })
     game.board = board
     if (pieceBag.length !== 1) {
       throw new Error('Unexpected amount of pieces in bag')
@@ -59,12 +62,16 @@ export function createGame(opts: CreateGameOptions) {
       winners: [],
       previousPushPosition: undefined,
       turnCounter: 0,
+      settings: {
+        trophyCount: cardsPerPlayer,
+        shuffleLevel: 'hard',
+      },
     }
     return initial
   }
 
   const gameState = createInitialState()
-  shuffleBoard('hard')
+  shuffleBoard()
 
   /**
    * Helper function to ensure a state mutation is reflected to callback.
@@ -91,6 +98,11 @@ export function createGame(opts: CreateGameOptions) {
 
     return gameState
   }
+
+  const changeSettings = mutator((settings: Partial<t.GameSettings>) => {
+    const game = stageGuard(['setup'])
+    game.settings = { ...game.settings, ...settings }
+  })
 
   const nextTurn = mutator(() => {
     const game = stageGuard(['playing'])
@@ -132,7 +144,7 @@ export function createGame(opts: CreateGameOptions) {
       setPlayerPosition(player.id, assertDefined(corners.pop()))
 
       // Deal cards
-      player.cards = _.times(cardsPerPlayer).map(() =>
+      player.cards = _.times(game.settings.trophyCount).map(() =>
         assertDefined(gameState.cards.pop())
       )
     })
@@ -153,7 +165,7 @@ export function createGame(opts: CreateGameOptions) {
       gameAny[key] = initial[key]
     })
 
-    shuffleBoard('hard')
+    shuffleBoard()
 
     // Remove added state from players
     game.players.forEach((player) => {
@@ -383,6 +395,7 @@ export function createGame(opts: CreateGameOptions) {
 
   return {
     getState: () => gameState as t.Game,
+    changeSettings,
     restart,
     start,
     shuffleBoard,

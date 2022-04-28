@@ -19,8 +19,9 @@ export type ServerRpcAPI = {
   start: (adminToken: string) => void
   restart: (adminToken: string) => void
   promote: (adminToken: string) => void
-  shuffleBoard: (adminToken: string, level: ShuffleLevel) => void
+  shuffleBoard: (adminToken: string, level?: ShuffleLevel) => void
   removePlayer: (adminToken: string, id: Player['id']) => void
+  changeSettings: (adminToken: string, settings: Partial<GameSettings>) => void
 }
 
 export type ClientRpcAPI = {
@@ -43,6 +44,10 @@ export type ClientGameState = Omit<Game, 'board' | 'cards' | 'players'> & {
 }
 
 // Game
+export type GameSettings = {
+  trophyCount: number
+  shuffleLevel: ShuffleLevel
+}
 export type GameCommonProperties = {
   playerColors: PlayerColor[]
   players: Player[]
@@ -51,6 +56,7 @@ export type GameCommonProperties = {
   playerTurn: number
   playerWhoStarted: number
   turnCounter: number
+  settings: GameSettings
 }
 export type Game = GameSetup | GamePlaying | GameFinished
 export type GameStage = 'setup' | 'playing' | 'finished'

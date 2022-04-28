@@ -159,6 +159,13 @@ export const GameClient = (props: Props) => {
     await client.client.notify.removePlayer(adminToken, id)
   }
 
+  async function onSettingsChange(settings: Partial<t.GameSettings>) {
+    if (!client || !adminToken) {
+      return
+    }
+    await client.client.changeSettings(adminToken, settings)
+  }
+
   async function onMove(piece: t.CensoredPieceOnBoard) {
     if (!client || !gameState || !isMyTurn()) {
       return
@@ -232,7 +239,7 @@ export const GameClient = (props: Props) => {
     if (!client || !adminToken) {
       return
     }
-    await client.client.shuffleBoard(adminToken, 'hard')
+    await client.client.shuffleBoard(adminToken)
   }
 
   const containerProps = {
@@ -278,6 +285,7 @@ export const GameClient = (props: Props) => {
         onRemovePlayer={onRemovePlayer}
         onStartGameClick={onStartGameClick}
         onRestartGameClick={onRestartGameClick}
+        onSettingsChange={onSettingsChange}
         serverPeerId={serverPeerId}
       />
       {gameState.stage !== 'setup' && myNextCard && (

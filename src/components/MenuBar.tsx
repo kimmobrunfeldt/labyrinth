@@ -13,6 +13,7 @@ export type Props = {
   onAddBot: AdminPanelProps['onAddBot']
   onRemovePlayer: AdminPanelProps['onRemovePlayer']
   onStartGameClick: AdminPanelProps['onStartGameClick']
+  onSettingsChange: AdminPanelProps['onSettingsChange']
   onRestartGameClick: () => void
 }
 
@@ -106,6 +107,7 @@ export default function MenuBar({
   onStartGameClick,
   onRestartGameClick,
   onRemovePlayer,
+  onSettingsChange,
   gameState,
 }: Props) {
   const [open, setOpen] = useState(getSavedAdminPanelOpen())
@@ -127,6 +129,11 @@ export default function MenuBar({
     onStartGameClick()
   }
 
+  function _onRestartGameClick() {
+    setOpen(false)
+    onRestartGameClick()
+  }
+
   return (
     <div
       style={{
@@ -146,6 +153,8 @@ export default function MenuBar({
           onAddBot={onAddBot}
           onRemovePlayer={onRemovePlayer}
           onStartGameClick={_onStartGameClick}
+          onRestartGameClick={_onRestartGameClick}
+          onSettingsChange={onSettingsChange}
         />
       )}
       {showAdmin ? (

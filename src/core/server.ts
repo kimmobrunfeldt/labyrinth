@@ -19,7 +19,7 @@ import {
 
 const logger = getLogger('SERVER:')
 
-export const TURN_TIMEOUT_SECONDS = 60
+export const TURN_TIMEOUT_SECONDS = 90
 export const CHECK_TURN_END_INTERVAL_SECONDS = 0.5
 export const SERVER_TOWARDS_CLIENT_TIMEOUT_SECONDS = 10
 
@@ -87,7 +87,7 @@ export async function createServer(
             start,
             restart,
             promote: async () => game.promotePlayer(playerId),
-            shuffleBoard: async (level: t.ShuffleLevel) => {
+            shuffleBoard: async (level?: t.ShuffleLevel) => {
               game.shuffleBoard(level)
             },
             removePlayer: async (id: t.Player['id']) => {
@@ -103,6 +103,9 @@ export async function createServer(
 
               game.removePlayer(id)
               sendMessage(`${player.name} disconnected (kicked)`)
+            },
+            changeSettings: async (settings: Partial<t.GameSettings>) => {
+              game.changeSettings(settings)
             },
           },
           adminToken
@@ -287,7 +290,7 @@ export async function createServer(
 
     const currentCardsStart = game.getPlayersCurrentCards(player.id)
     const turnCounterNow = game.getState().turnCounter
-    const secondLeftWarnings = [30, 10].sort().reverse()
+    const secondLeftWarnings = [60, 30, 10].sort().reverse()
 
     for (
       let i = 0;

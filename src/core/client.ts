@@ -167,6 +167,7 @@ function createRpc(conn: Peer.DataConnection, opts: ClientOptions) {
     promote: (...args) => client.promote(...args),
     shuffleBoard: (...args) => client.shuffleBoard(...args),
     removePlayer: (...args) => client.removePlayer(...args),
+    changeSettings: (...args) => client.changeSettings(...args),
   }
 
   const retryClient = retryify(clientObj, {
