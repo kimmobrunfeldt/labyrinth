@@ -22,12 +22,12 @@ export class PeerJsTransportServer {
 
   onData(callback: (data: unknown) => unknown) {
     this.peerConnection.on('data', async (reqData) => {
+      const respData = await callback(reqData)
+      if (!respData) return // no data means notification
       if (this.closed) {
         throw new Error('Peer connection closed')
       }
 
-      const respData = await callback(reqData)
-      if (!respData) return // no data means notification
       this.peerConnection.send(respData)
     })
   }

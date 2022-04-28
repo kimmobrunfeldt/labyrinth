@@ -23,18 +23,18 @@ export type CreateGameOptions = {
   cardsPerPlayer?: number
 }
 
-export async function createGame(opts: CreateGameOptions) {
+export function createGame(opts: CreateGameOptions) {
   const onStateChange = opts.onStateChange ?? (() => undefined)
   const cardsPerPlayer = opts.cardsPerPlayer ?? 5
 
   // Note: Many other functions rely on object reference pointers.
   //       It is safe to do the shuffle before game starts, but after
   //       that it breaks the references.
-  const shuffleBoard = mutator(async (level: t.ShuffleLevel) => {
+  const shuffleBoard = mutator((level: t.ShuffleLevel) => {
     const game = stageGuard(['setup'])
 
     const shuffleFn = algo.systematicRandom
-    const { board, pieceBag } = await shuffleFn({ logger, level })
+    const { board, pieceBag } = shuffleFn({ logger, level })
     game.board = board
     if (pieceBag.length !== 1) {
       throw new Error('Unexpected amount of pieces in bag')
@@ -64,7 +64,7 @@ export async function createGame(opts: CreateGameOptions) {
   }
 
   const gameState = createInitialState()
-  await shuffleBoard('hard')
+  shuffleBoard('hard')
 
   /**
    * Helper function to ensure a state mutation is reflected to callback.
@@ -74,8 +74,8 @@ export async function createGame(opts: CreateGameOptions) {
   function mutator<ArgsT extends unknown[], ReturnT>(
     fn: (...args: ArgsT) => Promise<ReturnT> | ReturnT
   ): (...args: ArgsT) => Promise<ReturnT> | ReturnT {
-    return async (...args: ArgsT) => {
-      const val = await fn(...args)
+    return (...args: ArgsT) => {
+      const val = fn(...args)
       // TODO: How to prevent nested mutator calls to emit state change n times
       onStateChange(gameState)
       return val
@@ -138,7 +138,7 @@ export async function createGame(opts: CreateGameOptions) {
     })
   })
 
-  const restart = mutator(async () => {
+  const restart = mutator(() => {
     const game = gameState as t.Game
     const gameAny = game as any
 
@@ -153,7 +153,7 @@ export async function createGame(opts: CreateGameOptions) {
       gameAny[key] = initial[key]
     })
 
-    await shuffleBoard('hard')
+    shuffleBoard('hard')
 
     // Remove added state from players
     game.players.forEach((player) => {
@@ -179,7 +179,7 @@ export async function createGame(opts: CreateGameOptions) {
       const game = stageGuard(['setup', 'playing'])
 
       if (game.players.length >= 4 || gameState.playerColors.length === 0) {
-        throw new Error('Max players already joined')
+        throw new Error('Server is full')
       }
 
       const p = player as t.Player

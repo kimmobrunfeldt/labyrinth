@@ -30,11 +30,9 @@ export const App = () => {
 
     const server = await createServer({
       peerId: serverPeerId,
-      cardsPerPlayer: 3,
+      cardsPerPlayer: 5,
     })
     setServer({ ...server, isServerHost: true })
-
-    // await createBot(`bot-${getRandomAdminToken()}`, server)
   }
 
   function joinGame(serverPeerId: string) {

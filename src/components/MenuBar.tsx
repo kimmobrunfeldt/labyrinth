@@ -10,7 +10,8 @@ export type Props = {
   showAdmin: boolean
   serverPeerId: string
   gameState: t.ClientGameState
-  onAddBotClick: AdminPanelProps['onAddBotClick']
+  onAddBot: AdminPanelProps['onAddBot']
+  onRemovePlayer: AdminPanelProps['onRemovePlayer']
   onStartGameClick: AdminPanelProps['onStartGameClick']
   onRestartGameClick: () => void
 }
@@ -84,7 +85,11 @@ function getPlayIcon({
         <img
           className="cursor-pointer icon-hover"
           onClick={onRestartGameClick}
-          style={style}
+          style={{
+            ...style,
+            width: '18px',
+            height: '18px',
+          }}
           src={`${process.env.PUBLIC_URL}/Restart.svg`}
           alt="Restart game"
           title="Restart game"
@@ -97,9 +102,10 @@ function getPlayIcon({
 export default function MenuBar({
   serverPeerId,
   showAdmin,
-  onAddBotClick,
+  onAddBot,
   onStartGameClick,
   onRestartGameClick,
+  onRemovePlayer,
   gameState,
 }: Props) {
   const [open, setOpen] = useState(getSavedAdminPanelOpen())
@@ -137,7 +143,8 @@ export default function MenuBar({
           open={open}
           onCloseClick={() => setOpen(false)}
           gameState={gameState}
-          onAddBotClick={onAddBotClick}
+          onAddBot={onAddBot}
+          onRemovePlayer={onRemovePlayer}
           onStartGameClick={_onStartGameClick}
         />
       )}

@@ -21,8 +21,13 @@ export async function connectBot(
   const turnsReacted = new Set<number>()
   const client = await createClient({
     playerId,
+    playerName: 'Random bot',
     logger,
     serverPeerId: server.peerId,
+    onJoin: async (state) => {
+      logger.log('Joined server')
+      gameState = state
+    },
     onStateChange: async (state) => {
       gameState = state
 

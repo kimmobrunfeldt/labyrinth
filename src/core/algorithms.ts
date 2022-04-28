@@ -28,7 +28,7 @@ import {
 } from 'src/gameTypes'
 import { Logger } from 'src/utils/utils'
 
-export async function random({ logger }: { logger: Logger }) {
+export function random({ logger }: { logger: Logger }) {
   while (true) {
     const pieces = createPieceBag()
     const board = {
@@ -83,13 +83,11 @@ export async function random({ logger }: { logger: Logger }) {
       }
 
       tries++
-      // To make the algorithm async
-      await new Promise((resolve) => setTimeout(resolve, 0))
     }
   }
 }
 
-export async function systematicRandom({
+export function systematicRandom({
   logger,
   level,
 }: {
@@ -105,9 +103,6 @@ export async function systematicRandom({
   const noSolutions = createRingBuffer<number>({ max: maxBuffer })
 
   while (emptyPiecesCount(board) > 0) {
-    // To make the algorithm async
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
     // Since the board has empty slots -> pieces array must be non-empty
     // as there will always be one piece left even after complete filling
     const index = getWeightedRandomPieceIndex(pieces as NonEmptyArray<Piece>)

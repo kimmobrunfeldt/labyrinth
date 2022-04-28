@@ -20,13 +20,15 @@ export type ServerRpcAPI = {
   restart: (adminToken: string) => void
   promote: (adminToken: string) => void
   shuffleBoard: (adminToken: string, level: ShuffleLevel) => void
+  removePlayer: (adminToken: string, id: Player['id']) => void
 }
 
 export type ClientRpcAPI = {
+  onJoin: (gameState: ClientGameState) => void
   onStateChange: (gameState: ClientGameState) => void
   onMessage: (message: string) => void
   onPushPositionHover: (hoverPos?: Position) => void
-  onServerFull: () => void
+  onServerReject: (message: string) => void
 }
 
 // XXX: There's a risk of leaking private attributes from Game object using this approach
@@ -84,6 +86,7 @@ export type Player = {
   color: PlayerColor
   cards: Card[]
 }
+export type BotName = 'random'
 export type CensoredPlayer = Omit<Player, 'cards'> & {
   currentCards: Card[]
   censoredCards: CensoredCard[]
@@ -193,6 +196,9 @@ export type NonStrictParameters<F> = F extends (...args: unknown[]) => unknown
 export type NonStrictReturnType<F> = F extends (...args: unknown[]) => unknown
   ? ReturnType<F>
   : never
+
+export type RpcProxy<T extends { [key: string]: (...args: any[]) => any }> =
+  PromisifyMethods<T> & { notify: PromisifyMethods<T> }
 
 export type PromisifyMethods<
   T extends { [key: string]: (...args: any[]) => any }

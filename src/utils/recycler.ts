@@ -9,10 +9,13 @@ export type RecyclerOpts<T> = {
   logger?: Logger
 }
 
+export type StopOptions = {
+  destroy?: boolean
+}
 export type Recycler<T> = {
   current: T
   recycle: () => Promise<void>
-  stop: () => Promise<void>
+  stop: (opts?: StopOptions) => Promise<void>
 }
 
 /**
@@ -66,13 +69,26 @@ export async function createRecycler<T>({
     }
   }
 
-  async function stop() {
+  async function stop(opts: StopOptions = {}) {
     stopRecycle = true
-    await destroyer(current)
+    if (opts.destroy) {
+      await destroyer(current)
+    }
   }
 
   function initAutoRecycleTrigger(obj: T) {
-    autoRecycle && autoRecycle(obj, _.once(recycle))
+    if (autoRecycle) {
+      autoRecycle(
+        obj,
+        _.once(() => {
+          if (stopRecycle) {
+            return
+          }
+
+          void recycle()
+        })
+      )
+    }
   }
 
   return {

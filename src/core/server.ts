@@ -21,6 +21,7 @@ const logger = getLogger('SERVER:')
 
 export const TURN_TIMEOUT_SECONDS = 60
 export const CHECK_TURN_END_INTERVAL_SECONDS = 0.5
+export const SERVER_TOWARDS_CLIENT_TIMEOUT_SECONDS = 10
 
 export type GameServer = {
   peerId: string
@@ -34,12 +35,12 @@ export async function createServer(
   const players: Record<
     string,
     {
-      client: t.PromisifyMethods<t.ClientRpcAPI>
+      client: t.RpcProxy<t.ClientRpcAPI>
       connection: DataConnection
-      status: 'connected' | 'disconnected'
+      status: 'connected' | 'disconnected' | 'toBeKicked'
     }
   > = {}
-  const game = await createGame({
+  const game = createGame({
     ...gameOpts,
     onStateChange: sendStateToEveryone,
   })
@@ -47,8 +48,8 @@ export async function createServer(
 
   const network = await createServerNetworking({
     peerId,
-    onClientConnect: async (playerId, connection) => {
-      logger.log(`Player '${playerId}' connected`)
+    onClientConnect: async (playerId, connection, playerName) => {
+      logger.log(`Player '${playerName ?? playerId}' connected`)
       const server = new MoleServer({
         transports: [],
       })
@@ -87,7 +88,21 @@ export async function createServer(
             restart,
             promote: async () => game.promotePlayer(playerId),
             shuffleBoard: async (level: t.ShuffleLevel) => {
-              await game.shuffleBoard(level)
+              game.shuffleBoard(level)
+            },
+            removePlayer: async (id: t.Player['id']) => {
+              logger.log(`Player '${playerId}' will be kicked`)
+
+              const player = game.getPlayerById(id)
+              if (id in players) {
+                players[id].status = 'toBeKicked'
+                await players[id].client.onServerReject('host kicked you out')
+                players[id].connection.close()
+                delete players[id]
+              }
+
+              game.removePlayer(id)
+              sendMessage(`${player.name} disconnected (kicked)`)
             },
           },
           adminToken
@@ -100,12 +115,14 @@ export async function createServer(
           peerConnection: connection,
         })
       )
-      const client: t.PromisifyMethods<t.ClientRpcAPI> = new MoleClient({
-        requestTimeout: 60 * 1000,
-        transport: new PeerJsTransportClient({ peerConnection: connection }),
+      const client: t.RpcProxy<t.ClientRpcAPI> = new MoleClient({
+        requestTimeout: SERVER_TOWARDS_CLIENT_TIMEOUT_SECONDS * 1000,
+        transport: new PeerJsTransportClient({
+          peerConnection: connection,
+        }),
       })
 
-      function setPlayer() {
+      async function setPlayer() {
         players[playerId] = {
           client,
           connection,
@@ -113,30 +130,40 @@ export async function createServer(
         }
       }
 
+      if (playerId in players) {
+        // Reconnected back
+        setPlayer()
+        // This is sending the data twice for joined player
+        await players[playerId].client.onJoin(getStateForPlayer(playerId))
+        await sendStateToEveryone()
+        sendMessage(`${game.getPlayerById(playerId).name} reconnected`)
+        return
+      }
+
       try {
         if (!(playerId in players)) {
           setPlayer()
-          game.addPlayer({ id: playerId })
-          return
+          game.addPlayer({ id: playerId, name: playerName }) // will also send state
+          await players[playerId].client.onJoin(getStateForPlayer(playerId))
         }
       } catch (err) {
         // Close connection max players joined
         logger.warn('Adding player failed:', err)
         delete players[playerId]
-
-        await client.onServerFull()
+        await client.onServerReject((err as Error).message.toLowerCase())
         connection.close()
-      }
-
-      setPlayer()
-      await sendStateToEveryone()
-    },
-    onClientDisconnect: async (playerId) => {
-      logger.log(`Player '${playerId}' disconnected`)
-      if (!(playerId in players)) {
         return
       }
 
+      sendMessage(`${game.getPlayerById(playerId).name} connected`)
+    },
+    onClientDisconnect: async (playerId) => {
+      logger.log(`Player '${playerId}' disconnected`)
+      if (!(playerId in players) || players[playerId].status === 'toBeKicked') {
+        return
+      }
+
+      const player = game.getPlayerById(playerId)
       if (game.getState().stage !== 'setup') {
         players[playerId].status = 'disconnected'
         await sendStateToEveryone()
@@ -144,6 +171,8 @@ export async function createServer(
         delete players[playerId]
         game.removePlayer(playerId)
       }
+
+      sendMessage(`${player.name} disconnected`)
     },
   })
 
@@ -208,7 +237,9 @@ export async function createServer(
       },
       players: state.players.map((p) => ({
         ...censorPlayer(p),
-        status: players[p.id].status,
+        status: (players[p.id].status === 'toBeKicked'
+          ? 'disconnected'
+          : players[p.id].status) as 'connected' | 'disconnected',
       })),
       me: censorPlayer(game.getPlayerById(playerId)),
       myCurrentCards: game.getPlayersCurrentCards(playerId),
@@ -231,7 +262,7 @@ export async function createServer(
     initiateGameLoop()
       .then(sendStateToEveryone)
       .then(() => {
-        sendMessage('Game ended.')
+        sendMessage('Game finished!')
         logger.log('Game loop ended!')
       })
   }
@@ -252,9 +283,10 @@ export async function createServer(
   async function turn() {
     const player = game.whosTurn()
     logger.log('Turn by', player.name)
-    sendMessage(`Turn for ${player.name}`)
-    const turnCounterNow = game.getState().turnCounter
+    sendMessage(`${player.name} turn`)
 
+    const currentCardsStart = game.getPlayersCurrentCards(player.id)
+    const turnCounterNow = game.getState().turnCounter
     const secondLeftWarnings = [30, 10].sort().reverse()
 
     for (
@@ -274,6 +306,11 @@ export async function createServer(
       }
 
       if (turnCounterNow !== game.getState().turnCounter) {
+        const cardsNow = game.getPlayersCurrentCards(player.id)
+        if (currentCardsStart[0].trophy !== cardsNow[0]?.trophy) {
+          sendMessage(`${player.name} found ${currentCardsStart[0].trophy}!`)
+        }
+
         logger.log('Player', player.name, 'has finished their turn')
         return
       }
@@ -306,7 +343,11 @@ export async function createServer(
 
 export type CreateServerNetworkingOptions = {
   peerId?: string
-  onClientConnect: (id: string, connection: Peer.DataConnection) => void
+  onClientConnect: (
+    id: string,
+    connection: Peer.DataConnection,
+    name?: string
+  ) => void
   onClientDisconnect: (id: string, connection: Peer.DataConnection) => void
 }
 
@@ -343,8 +384,10 @@ async function _createServerNetworking(
 
     peer.on('connection', (conn) => {
       const playerId = conn.metadata.id
+      const playerName = conn.metadata.name
+
       conn.on('open', async () => {
-        opts.onClientConnect(playerId, conn)
+        opts.onClientConnect(playerId, conn, playerName)
       })
       conn.on('close', () => {
         opts.onClientDisconnect(playerId, conn)

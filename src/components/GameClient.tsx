@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import BoardComponent from 'src/components/Board'
 import ConfirmLeave from 'src/components/ConfirmLeave'
 import MenuBar from 'src/components/MenuBar'
@@ -62,10 +62,11 @@ export const GameClient = (props: Props) => {
   const [pushPositionHover, setPushPositionHover] = useState<
     UIPushPosition | undefined
   >(undefined)
-  const [messages, setMessages] = useState<Message[]>([
-    createMessage('Game setup'),
-  ])
-  const bots = useRef<Array<Awaited<ReturnType<typeof createClient>>>>([])
+  const [messages, setMessages] = useState<Message[]>(
+    adminToken
+      ? [createMessage('You are the host. Game server runs on your browser.')]
+      : []
+  )
 
   useEffect(() => {
     async function init() {
@@ -80,16 +81,24 @@ export const GameClient = (props: Props) => {
         playerId,
         logger: getLogger(`CLIENT:`),
         serverPeerId,
+        onJoin: async (state) => {
+          setGameState(state)
+
+          if (adminToken) {
+            await client.client.promote(adminToken)
+          }
+        },
         onPeerError: (err) => {
           setError(err)
         },
         onPeerConnectionClose: () => {
-          setError(new Error('Game server disconnected'))
+          // setError(new Error('Game server disconnected'))
         },
         onPeerConnectionOpen: () => {
           setError(undefined)
         },
         onPeerConnectionError: (err) => {
+          console.error(err)
           setError(err)
         },
         onStateChange: async (state) => {
@@ -102,18 +111,15 @@ export const GameClient = (props: Props) => {
             : undefined
           setPushPositionHover(uiPos)
         },
-        onServerFull: async () => {
-          setError(new Error('Game server full'))
+        onServerReject: async (message) => {
+          console.error('Rejected by server', message)
+          setError(new Error(message))
         },
         onMessage: async (msg) => {
           onMessage(msg)
         },
       })
-      if (adminToken) {
-        await client.client.promote(adminToken)
-      }
 
-      setGameState(await client.client.getState())
       setClient(client)
     }
     init()
@@ -135,9 +141,22 @@ export const GameClient = (props: Props) => {
     return gameState.playerTurn === myIndex
   }
 
-  async function onAddBot() {
-    const client = await connectBot(`bot-${uuid()}`, { peerId: serverPeerId })
-    bots.current.push(client)
+  async function onAddBot(name: t.BotName) {
+    switch (name) {
+      case 'random': {
+        await connectBot(`bot-${uuid()}`, {
+          peerId: serverPeerId,
+        })
+      }
+    }
+  }
+
+  async function onRemovePlayer(id: t.Player['id']) {
+    if (!client || !gameState || !adminToken) {
+      return
+    }
+
+    await client.client.notify.removePlayer(adminToken, id)
   }
 
   async function onMove(piece: t.CensoredPieceOnBoard) {
@@ -255,7 +274,8 @@ export const GameClient = (props: Props) => {
       <MenuBar
         gameState={gameState}
         showAdmin={!_.isUndefined(adminToken)}
-        onAddBotClick={onAddBot}
+        onAddBot={onAddBot}
+        onRemovePlayer={onRemovePlayer}
         onStartGameClick={onStartGameClick}
         onRestartGameClick={onRestartGameClick}
         serverPeerId={serverPeerId}
@@ -339,6 +359,7 @@ const BoardShuffleIcon = ({
   </div>
 )
 
+const UPWARDS_TROPHIES = ['Candles', 'KnightHelmet']
 const CurrentTrophy = ({ trophy }: { trophy: t.Trophy }) => (
   <div
     style={{
@@ -356,6 +377,7 @@ const CurrentTrophy = ({ trophy }: { trophy: t.Trophy }) => (
         position: 'relative',
         top: '-15px',
         width: '70px',
+        transform: `rotate(${UPWARDS_TROPHIES.includes(trophy) ? 180 : 0}deg)`,
       }}
       src={`${process.env.PUBLIC_URL}/pieces/${trophy}.svg`}
       alt={trophy}

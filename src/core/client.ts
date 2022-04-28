@@ -3,6 +3,7 @@ import MoleServer from 'mole-rpc/MoleServer'
 import X from 'mole-rpc/X'
 import Peer from 'peerjs'
 import retryify from 'promise-retryify'
+import { SERVER_TOWARDS_CLIENT_TIMEOUT_SECONDS } from 'src/core/server'
 import * as t from 'src/gameTypes'
 import { debugLevel, iceServers } from 'src/peerConfig'
 import { createRecycler, Recycler } from 'src/utils/recycler'
@@ -17,15 +18,17 @@ import {
 
 export type ClientOptions = {
   playerId: string
+  playerName?: string
   serverPeerId: string
   onPeerError?: (err: Error) => void
   onPeerConnectionError?: (err: Error) => void
   onPeerConnectionClose?: () => void
   onPeerConnectionOpen?: () => void
+  onJoin: t.PromisifyMethods<t.ClientRpcAPI>['onJoin']
   onStateChange: t.PromisifyMethods<t.ClientRpcAPI>['onStateChange']
   onPushPositionHover?: t.PromisifyMethods<t.ClientRpcAPI>['onPushPositionHover']
   onMessage?: t.PromisifyMethods<t.ClientRpcAPI>['onMessage']
-  onServerFull?: t.PromisifyMethods<t.ClientRpcAPI>['onServerFull']
+  onServerReject?: t.PromisifyMethods<t.ClientRpcAPI>['onServerReject']
   logger: Logger
 }
 
@@ -48,10 +51,16 @@ export async function createClient(opts: ClientOptions) {
       factory: async () =>
         await _createClient({
           ...opts,
-          onServerFull: async () => {
-            opts.logger.warn('Server was full! Stopping client recycling ...')
-            await recycler.stop()
+          onServerReject: async (message) => {
+            opts.logger.warn(
+              'Server rejected us. Stopping client recycling ...',
+              'Reason for rejection:',
+              message
+            )
+            // Server will close the connection, so let's not do it from the client
+            await recycler.stop({ destroy: false })
             opts.logger.log('Stopped.')
+            opts.onServerReject && opts.onServerReject(message)
           },
         }),
       destroyer: async (current) => current.destroy(),
@@ -67,7 +76,7 @@ export async function createClient(opts: ClientOptions) {
 }
 
 async function _createClient(opts: ClientOptions): Promise<{
-  client: t.PromisifyMethods<t.ServerRpcAPI>
+  client: t.RpcProxy<t.ServerRpcAPI>
   destroy: () => void
   peer: Peer
   connection: Peer.DataConnection
@@ -87,6 +96,7 @@ async function _createClient(opts: ClientOptions): Promise<{
     reliable: true,
     metadata: {
       id: opts.playerId,
+      name: opts.playerName,
     },
   })
   await waitForEvent(connection, 'open')
@@ -116,11 +126,12 @@ function createRpc(conn: Peer.DataConnection, opts: ClientOptions) {
   })
 
   const clientRpcApi: t.PromisifyMethods<t.ClientRpcAPI> = {
+    onStateChange: opts.onStateChange,
+    onJoin: opts.onJoin,
     // Don't require thesefor bot clients
     onMessage: opts.onMessage ?? (async () => undefined),
     onPushPositionHover: opts.onPushPositionHover ?? (async () => undefined),
-    onStateChange: opts.onStateChange,
-    onServerFull: opts.onServerFull ?? (async () => undefined),
+    onServerReject: opts.onServerReject ?? (async () => undefined),
   }
   const rpcLogger = getLogger(`CLIENT RPC:`)
   clientServer.expose(wrapWithLogging(rpcLogger, clientRpcApi))
@@ -128,14 +139,21 @@ function createRpc(conn: Peer.DataConnection, opts: ClientOptions) {
     new PeerJsTransportServer({ peerConnection: conn })
   )
 
-  const client: t.PromisifyMethods<t.ServerRpcAPI> = new MoleClient({
-    requestTimeout: 2000,
+  const client: t.RpcProxy<t.ServerRpcAPI> = new MoleClient({
+    // This is required to be lower than the server's timeout towards clients.
+    // Think of this scenario:
+    // * You send "kick player 2" to server (5s timeout)
+    // * Server sends "server is full get out" to player 2 (10s timeout)
+    // * Player 2 disconnects without responding
+    // * ... server keeps waiting
+    // * Your client times out before server responds to you -> recycle of your client
+    requestTimeout: (SERVER_TOWARDS_CLIENT_TIMEOUT_SECONDS - 2) * 1000,
     transport: new PeerJsTransportClient({
       peerConnection: conn,
     }),
   })
   // Re-create the proxified functions for retryify to work
-  const clientObj: t.PromisifyMethods<t.ServerRpcAPI> = {
+  const clientObj: Omit<t.RpcProxy<t.ServerRpcAPI>, 'notify'> = {
     getState: (...args) => client.getState(...args),
     getMyPosition: (...args) => client.getMyPosition(...args),
     getMyCurrentCards: (...args) => client.getMyCurrentCards(...args),
@@ -148,6 +166,7 @@ function createRpc(conn: Peer.DataConnection, opts: ClientOptions) {
     restart: (...args) => client.restart(...args),
     promote: (...args) => client.promote(...args),
     shuffleBoard: (...args) => client.shuffleBoard(...args),
+    removePlayer: (...args) => client.removePlayer(...args),
   }
 
   const retryClient = retryify(clientObj, {
@@ -169,5 +188,7 @@ function createRpc(conn: Peer.DataConnection, opts: ClientOptions) {
     },
   })
 
-  return retryClient
+  const anyClient = retryClient as t.RpcProxy<t.ServerRpcAPI>
+  anyClient.notify = retryClient
+  return anyClient
 }

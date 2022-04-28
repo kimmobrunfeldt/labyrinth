@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react'
+import { Select } from 'src/components/Select'
 import * as t from 'src/gameTypes'
 
 export type Props = {
   open: boolean
   onStartGameClick: () => void
-  onAddBotClick: () => void
+  onAddBot: (name: t.BotName) => void
+  onRemovePlayer: (id: t.Player['id']) => void
   gameState: t.ClientGameState
   onCloseClick: () => void
 }
@@ -13,7 +15,8 @@ const AdminPanel = ({
   open,
   onStartGameClick,
   gameState,
-  onAddBotClick,
+  onAddBot,
+  onRemovePlayer,
   onCloseClick,
 }: Props) => {
   const startDisabled = Boolean(gameState && gameState.stage !== 'setup')
@@ -83,14 +86,84 @@ const AdminPanel = ({
               >
                 Admin panel
               </h2>
-              <div style={{ padding: '20px 0 0 0' }}>
-                <button
-                  disabled={startDisabled}
-                  className="button-50 button-50-secondary button-50-small"
-                  onClick={onAddBotClick}
+
+              <div style={{ paddingTop: '10px', paddingBottom: '20px' }}>
+                <h3
+                  style={{
+                    fontSize: '14px',
+                    color: '#857E77',
+                    textTransform: 'uppercase',
+                  }}
                 >
-                  Add bot
-                </button>
+                  Game
+                </h3>
+              </div>
+              <div style={{ padding: '20px 0 0 0' }}>
+                <h3
+                  style={{
+                    fontSize: '14px',
+                    color: '#857E77',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Players
+                </h3>
+                {gameState.players.map((p) => {
+                  return (
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                      key={p.id}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '5px 0',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '15px',
+                            height: '15px',
+                            borderRadius: '999px',
+                            background: p.color,
+                            marginRight: '8px',
+                          }}
+                        />
+                        {p.name}
+                      </div>
+                      {gameState.stage === 'setup' && p.id !== gameState.me.id && (
+                        <div
+                          onClick={() => onRemovePlayer(p.id)}
+                          title="Remove"
+                          role="button"
+                          style={{
+                            cursor: 'pointer',
+                            padding: '6px',
+                            fontSize: '25x',
+                            fontWeight: 'bold',
+                          }}
+                        >
+                          ×
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+                {gameState.stage === 'setup' && gameState.players.length < 4 && (
+                  <div style={{ marginTop: '10px' }}>
+                    <Select
+                      placeholder="Add bot"
+                      value={''}
+                      onChange={(value) => onAddBot(value as t.BotName)}
+                      options={[{ value: 'random', label: 'Random bot' }]}
+                    />
+                  </div>
+                )}
               </div>
             </div>
             <div
