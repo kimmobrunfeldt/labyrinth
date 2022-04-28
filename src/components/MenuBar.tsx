@@ -28,9 +28,14 @@ function getCenterElement(
   switch (gameState.stage) {
     case 'setup':
       return (
-        <a target="_blank" href={`#${serverPeerId}`} rel="noreferrer">
-          {serverPeerId}
-        </a>
+        <div>
+          <span style={{ color: '#555', marginRight: '4px', fontWeight: 500 }}>
+            ID:
+          </span>
+          <a target="_blank" href={`#${serverPeerId}`} rel="noreferrer">
+            {serverPeerId}
+          </a>
+        </div>
       )
     case 'playing': {
       const action = gameState.playerHasPushed ? 'move' : 'push'

@@ -21,7 +21,7 @@ export async function connectBot(
   const turnsReacted = new Set<number>()
   const client = await createClient({
     playerId,
-    playerName: 'Random bot',
+    playerName: 'Randbot',
     logger,
     serverPeerId: server.peerId,
     onJoin: async (state) => {
@@ -89,6 +89,7 @@ async function move(gameState: t.ClientGameState, client: Client) {
       new Set([assertDefined(piece)])
     )
   )
+
   // Prefer another piece
   const newPos =
     connected.find(
