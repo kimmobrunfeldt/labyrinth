@@ -30,7 +30,7 @@ export const App = () => {
 
     const server = await createServer({
       peerId: serverPeerId,
-      cardsPerPlayer: 1,
+      cardsPerPlayer: 3,
     })
     setServer({ ...server, isServerHost: true })
 
