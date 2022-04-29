@@ -90,6 +90,10 @@ const BoardComponent = ({
     )
   )
   piecesToRender.push({ type: 'extra', extraPiece })
+  // This makes sure the board pieces render always in the same order -> no mounting / unmounting
+  const sortedPiecesToRender = _.sortBy(piecesToRender, (p) =>
+    p.type === 'extra' ? p.extraPiece.id : p.piece?.id
+  )
 
   const pushPlaceholdersForRender = _.compact(
     UI_PUSH_POSITIONS.map(({ x, y, direction }) => {
@@ -133,18 +137,23 @@ const BoardComponent = ({
 
   const resolvedExtraPiecePos = getExtraPiecePosition()
 
-  const content = (
-    <>
+  const boardContent = (
+    <div>
       <BoardBackground pieceWidth={pieceWidth} />
 
       {pushPlaceholdersForRender.map((uiPushPosition) => {
+        const isBlocked =
+          blockedPushPosition &&
+          uiPushPosition.x === blockedPushPosition.x &&
+          uiPushPosition.y === blockedPushPosition.y
+
         return (
           <PushPosition
             key={`push-${uiPushPosition.x}-${uiPushPosition.y}`}
             pieceWidth={pieceWidth}
             uiPushPosition={uiPushPosition}
             onMouseOver={() => {
-              if (gameState.stage !== 'playing') {
+              if (gameState.stage !== 'playing' && !isBlocked) {
                 return
               }
 
@@ -159,7 +168,7 @@ const BoardComponent = ({
         )
       })}
 
-      {piecesToRender.map((toRender) => {
+      {sortedPiecesToRender.map((toRender) => {
         // Absolutely horrible code coming up
         // The idea is to try to keep the piece container always render in DOM
         // so that the position transforms are fast CSS transitions
@@ -212,6 +221,9 @@ const BoardComponent = ({
               blockedPushPosition &&
               uiPushPos.x === blockedPushPosition.x &&
               uiPushPos.y === blockedPushPosition.y
+            const shouldInteract =
+              gameState.stage === 'playing' && !playerHasPushed && !isBlocked
+
             const isBeingHovered =
               lastHoveredPushPosition &&
               uiPushPos &&
@@ -223,7 +235,9 @@ const BoardComponent = ({
               boardPosition: toRender,
               pieceWidth,
               hoverUiPushPosition:
-                hoveringPushPosition && lastHoveredPushPosition
+                shouldInteract &&
+                hoveringPushPosition &&
+                lastHoveredPushPosition
                   ? lastHoveredPushPosition
                   : undefined,
             })
@@ -235,12 +249,11 @@ const BoardComponent = ({
                   }
                 : {}),
               zIndex: pushPos ? 90 : 5,
-              cursor: !playerHasPushed && uiPushPos ? 'pointer' : 'default',
+              cursor: shouldInteract ? 'pointer' : 'default',
 
               boxShadow:
-                gameState.stage === 'playing' &&
+                shouldInteract &&
                 isBeingHovered &&
-                !playerHasPushed &&
                 hoveringPushPosition &&
                 !isBlocked
                   ? `0 0 0 2px ${hex2rgba(gameState.me.color, alpha)}`
@@ -248,7 +261,7 @@ const BoardComponent = ({
             }
 
             const showCaret =
-              !playerHasPushed &&
+              shouldInteract &&
               isBeingHovered &&
               hoveringPushPosition &&
               uiPushPos
@@ -274,7 +287,11 @@ const BoardComponent = ({
                     }
                   }}
                   onMouseOver={() => {
-                    if (gameState.stage !== 'playing' || !uiPushPos) {
+                    if (
+                      gameState.stage !== 'playing' ||
+                      !uiPushPos ||
+                      isBlocked
+                    ) {
                       return
                     }
 
@@ -319,6 +336,7 @@ const BoardComponent = ({
 
         return (
           <div
+            key={key}
             style={{
               transition: 'transform 600ms ease, box-shadow 500ms ease',
               position: 'absolute',
@@ -327,13 +345,12 @@ const BoardComponent = ({
               height: `${pieceWidth}px`,
               ...containerStyle,
             }}
-            key={key}
           >
             {content}
           </div>
         )
       })}
-    </>
+    </div>
   )
 
   return (
@@ -356,7 +373,7 @@ const BoardComponent = ({
         aspectRatio: '1 / 1',
       }}
     >
-      {width === 0 ? null : content}
+      {width === 0 ? null : boardContent}
     </div>
   )
 }
