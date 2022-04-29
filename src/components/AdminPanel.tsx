@@ -23,20 +23,18 @@ const AdminPanel = ({
   onSettingsChange,
   onCloseClick,
 }: Props) => {
-  const startDisabled = Boolean(gameState && gameState.stage !== 'setup')
-
-  function keyDown(e: KeyboardEvent) {
-    if (e.keyCode === 27) {
-      onCloseClick()
-    }
-  }
-
   useEffect(() => {
+    function keyDown(e: KeyboardEvent) {
+      if (e.keyCode === 27) {
+        onCloseClick()
+      }
+    }
+
     document.addEventListener('keydown', keyDown)
     return () => {
       document.removeEventListener('keydown', keyDown)
     }
-  }, [])
+  }, [onCloseClick])
 
   return (
     <>
@@ -45,7 +43,8 @@ const AdminPanel = ({
           width: '90%',
           maxWidth: '230px',
           height: '100%',
-          position: 'absolute',
+          position: 'fixed',
+          overflow: 'auto',
           zIndex: '900',
           boxShadow: open ? '5px 5px 15px rgba(133, 126, 119, 0.4)' : undefined,
           borderTop: '6px solid #857E77',

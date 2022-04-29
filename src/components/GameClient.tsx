@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import BoardComponent from 'src/components/Board'
 import ConfirmLeave from 'src/components/ConfirmLeave'
 import MenuBar from 'src/components/MenuBar'
@@ -123,7 +123,8 @@ export const GameClient = (props: Props) => {
       setClient(client)
     }
     init()
-  }, [])
+    // We don't want to run this again pretty much ever
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function onMessage(msg: string) {
     setMessages((msgs) => [...msgs, createMessage(msg)])
@@ -393,34 +394,47 @@ const CurrentTrophy = ({ trophy }: { trophy: t.Trophy }) => (
   </div>
 )
 
-const MessageBox = ({ messages }: { messages: Message[] }) => (
-  <div
-    style={{
-      background: '#eee',
-      width: '100%',
-      padding: '20px 20px',
-      fontSize: '12px',
-      height: '150px',
-      borderRadius: '5px',
-      overflow: 'auto',
-    }}
-  >
-    {messages.map((msg, i) => (
-      <div
-        key={i}
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          fontFamily: 'monospace',
-        }}
-      >
-        <div style={{ marginRight: '10px' }}>
-          {msg.time.toLocaleTimeString()}
+const MessageBox = ({ messages }: { messages: Message[] }) => {
+  const messagesEndRef = useRef<HTMLDivElement | null>(null)
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  return (
+    <div
+      style={{
+        background: '#eee',
+        width: '100%',
+        padding: '20px 20px',
+        fontSize: '12px',
+        height: '150px',
+        borderRadius: '5px',
+        overflow: 'auto',
+      }}
+    >
+      {messages.map((msg, i) => (
+        <div
+          key={i}
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            fontFamily: 'monospace',
+          }}
+        >
+          <div style={{ marginRight: '10px' }}>
+            {msg.time.toLocaleTimeString()}
+          </div>
+          <div>{msg.message}</div>
         </div>
-        <div>{msg.message}</div>
-      </div>
-    ))}
-  </div>
-)
+      ))}
+      <div ref={messagesEndRef} />
+    </div>
+  )
+}
 
 export default GameClient
