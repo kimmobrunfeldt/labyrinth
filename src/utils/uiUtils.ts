@@ -67,3 +67,12 @@ export function usePrevious<T>(value: T): T | undefined {
   }, [value])
   return ref.current
 }
+
+export const hex2rgba = (hex: string, alpha = 1) => {
+  const matches = hex.match(/\w\w/g)
+  if (!matches) {
+    throw new Error(`Unable to parse hex: ${hex}`)
+  }
+  const [r, g, b] = matches.map((x) => parseInt(x, 16))
+  return `rgba(${r},${g},${b},${alpha})`
+}
