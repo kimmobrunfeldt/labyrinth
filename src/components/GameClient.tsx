@@ -412,7 +412,7 @@ const MessageBox = ({ messages }: { messages: Message[] }) => {
         width: '100%',
         padding: '20px 20px',
         fontSize: '12px',
-        height: '150px',
+        height: '80px',
         borderRadius: '5px',
         overflow: 'auto',
       }}

@@ -277,6 +277,7 @@ const BoardComponent = ({
                   key={piece.id}
                   pieceWidth={pieceWidth}
                   piece={piece}
+                  gameState={gameState}
                   playerInTurn={playerInTurn}
                   playerHasPushed={playerHasPushed}
                   onClick={() => {
@@ -471,6 +472,7 @@ type BoardPieceProps = {
   pieceWidth: number
   playerInTurn: t.CensoredPlayer
   playerHasPushed: boolean
+  gameState: t.ClientGameState
 }
 
 const BoardPiece = ({
@@ -482,6 +484,7 @@ const BoardPiece = ({
   pieceWidth,
   playerInTurn,
   playerHasPushed,
+  gameState,
 }: BoardPieceProps) => (
   <div
     onClick={onClick}
@@ -531,9 +534,29 @@ const BoardPiece = ({
                     border: `2px solid white`,
                     boxShadow: `0px 0px 0px 2px ${playerInTurn.color}`,
                   }
-                : {}),
+                : { border: `2px solid transparent` }),
             }}
-          />
+          >
+            {gameState.me.id === player.id && (
+              <span
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: '-25px',
+                  transform: 'translateX(-50%)',
+                  fontWeight: 'bold',
+                  fontSize: '15px',
+                  color: player.color,
+                  textTransform: 'uppercase',
+                  borderRadius: '7px',
+                  padding: '1px 5px',
+                  background: 'rgba(255, 255, 255, 0.7)',
+                }}
+              >
+                You
+              </span>
+            )}
+          </div>
         )
       })}
   </div>

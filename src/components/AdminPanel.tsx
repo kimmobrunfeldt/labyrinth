@@ -125,7 +125,7 @@ const AdminPanel = ({
                       color: '#666',
                     }}
                   >
-                    Board shuffle level
+                    Difficulty level
                   </label>
                   <Select
                     disabled={gameState.stage !== 'setup'}
@@ -136,9 +136,9 @@ const AdminPanel = ({
                       })
                     }
                     options={[
-                      { value: 'easy', label: 'Casual ' },
+                      { value: 'easy', label: 'Easy ' },
                       { value: 'hard', label: 'Intermediate' },
-                      { value: 'perfect', label: 'Perfect (slow)' },
+                      { value: 'perfect', label: 'Hard (slow)' },
                     ]}
                   />
                 </div>

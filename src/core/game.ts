@@ -101,6 +101,12 @@ export function createGame(opts: CreateGameOptions) {
 
   const changeSettings = mutator((settings: Partial<t.GameSettings>) => {
     const game = stageGuard(['setup'])
+    if (
+      settings.shuffleLevel &&
+      settings.shuffleLevel !== game.settings.shuffleLevel
+    ) {
+      shuffleBoard(settings.shuffleLevel)
+    }
     game.settings = { ...game.settings, ...settings }
   })
 
