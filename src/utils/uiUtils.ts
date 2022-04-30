@@ -89,3 +89,13 @@ export function directionToCaretRotation(direction: t.Direction): t.Rotation {
       return 270
   }
 }
+
+export function getPlayerInTurn(
+  gameState: t.ClientGameState
+): t.CensoredPlayer {
+  return gameState.players[gameState.playerTurn]
+}
+
+export function getIsMyTurn(gameState: t.ClientGameState): boolean {
+  return gameState.me.id === getPlayerInTurn(gameState).id
+}

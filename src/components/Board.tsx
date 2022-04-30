@@ -1,13 +1,11 @@
 import _ from 'lodash'
 import React, { useState } from 'react'
 import { useResizeDetector } from 'react-resize-detector'
-import { CaretUp, RotateIcon } from 'src/components/Icons'
-import Piece, { EmptyPiece, PIECE_MARGIN_PX } from 'src/components/Piece'
-import {
-  BOARD_PUSH_POSITIONS,
-  getOppositeDirection,
-  getPushPosition,
-} from 'src/core/board'
+import { ExtraPiece } from 'src/components/ExtraPiece'
+import { CaretUp } from 'src/components/Icons'
+import { EmptyPiece, PIECE_MARGIN_PX } from 'src/components/Piece'
+import { PieceOnBoard } from 'src/components/PieceOnBoard'
+import { BOARD_PUSH_POSITIONS, getPushPosition } from 'src/core/board'
 import { centered } from 'src/css'
 import * as t from 'src/gameTypes'
 import {
@@ -50,7 +48,7 @@ type PieceToRender =
       extraPiece: t.Piece
     }
 
-const BoardComponent = ({
+const Board = ({
   gameState,
   board,
   onMove,
@@ -63,7 +61,6 @@ const BoardComponent = ({
   pushPositionHover,
   isMyTurn,
   playerInTurn,
-  playerHasPushed,
 }: Props) => {
   const [lastHoveredPushPosition, setLastHoveredPushPosition] = useState<
     UIPushPosition | undefined
@@ -71,6 +68,7 @@ const BoardComponent = ({
   const [hoveringPushPosition, setHoveringPushPosition] = useState<boolean>()
   const { ref, width = 0 } = useResizeDetector()
 
+  const { playerHasPushed } = gameState
   const pieceWidth = Math.floor(
     (width - (PIECE_SLOTS - 1) * PIECE_MARGIN_PX) / PIECE_SLOTS
   )
@@ -145,7 +143,7 @@ const BoardComponent = ({
             pieceWidth={pieceWidth}
             uiPushPosition={uiPushPosition}
             onMouseOver={() => {
-              if (gameState.stage !== 'playing' && !isBlocked) {
+              if (gameState.stage !== 'playing' || isBlocked) {
                 return
               }
 
@@ -175,13 +173,10 @@ const BoardComponent = ({
         if (toRender.type === 'extra') {
           const extra = getExtraPieceContent({
             toRender,
-            isMyTurn,
             gameState,
-            playerInTurn,
             extraPiece,
             onClickExtraPiece,
             pieceWidth,
-            playerHasPushed,
             resolvedExtraPiecePos,
             setHoveringPushPosition,
           })
@@ -212,10 +207,8 @@ const BoardComponent = ({
               uiPushPos &&
               blockedPushPosition &&
               uiPushPos.x === blockedPushPosition.x &&
-              uiPushPos.y === blockedPushPosition.y &&
-              lastHoveredPushPosition &&
-              lastHoveredPushPosition.direction ===
-                getOppositeDirection(blockedPushPosition.direction)
+              uiPushPos.y === blockedPushPosition.y
+
             const shouldInteract =
               gameState.stage === 'playing' && !playerHasPushed && !isBlocked
 
@@ -269,7 +262,7 @@ const BoardComponent = ({
                   height: '100%',
                 }}
               >
-                <BoardPiece
+                <PieceOnBoard
                   key={piece.id}
                   pieceWidth={pieceWidth}
                   piece={piece}
@@ -412,22 +405,16 @@ function getExtraPieceContent({
   resolvedExtraPiecePos,
   pieceWidth,
   onClickExtraPiece,
-  isMyTurn,
-  playerInTurn,
   extraPiece,
   gameState,
-  playerHasPushed,
   setHoveringPushPosition,
 }: {
   toRender: PieceToRender
   resolvedExtraPiecePos: t.Position
   pieceWidth: number
   onClickExtraPiece: Props['onClickExtraPiece']
-  isMyTurn: boolean
-  playerInTurn: t.CensoredPlayer
   extraPiece: t.Piece
   gameState: t.ClientGameState
-  playerHasPushed: boolean
   setHoveringPushPosition: (val: boolean) => void
 }) {
   return {
@@ -444,120 +431,17 @@ function getExtraPieceContent({
     content: (
       <ExtraPiece
         key={extraPiece.id}
+        gameState={gameState}
         onClickExtraPiece={onClickExtraPiece}
         onMouseOver={() => setHoveringPushPosition(true)}
         onMouseOut={() => setHoveringPushPosition(false)}
         position={resolvedExtraPiecePos}
-        isMyTurn={isMyTurn}
         pieceWidth={pieceWidth}
-        playerInTurn={playerInTurn}
         piece={extraPiece}
-        playing={gameState.stage === 'playing'}
-        playerHasPushed={playerHasPushed}
       />
     ),
   }
 }
-
-type BoardPieceProps = {
-  onClick: React.DOMAttributes<HTMLDivElement>['onClick']
-  onMouseOver: React.DOMAttributes<HTMLDivElement>['onMouseOver']
-  onMouseOut: React.DOMAttributes<HTMLDivElement>['onMouseOut']
-  piece: t.CensoredPieceOnBoard
-  style?: React.CSSProperties
-  pieceWidth: number
-  playerInTurn: t.CensoredPlayer
-  playerHasPushed: boolean
-  gameState: t.ClientGameState
-}
-
-const BoardPiece = ({
-  onClick,
-  onMouseOver,
-  onMouseOut,
-  piece,
-  style = {},
-  pieceWidth,
-  playerInTurn,
-  playerHasPushed,
-  gameState,
-}: BoardPieceProps) => (
-  <div
-    onClick={onClick}
-    onMouseOver={onMouseOver}
-    onMouseOut={onMouseOut}
-    style={{
-      ...style,
-      width: `${pieceWidth}px`,
-      height: `${pieceWidth}px`,
-      position: 'absolute',
-      margin: 0,
-      padding: 0,
-    }}
-  >
-    <Piece
-      width={pieceWidth}
-      style={{
-        position: 'absolute',
-      }}
-      piece={piece}
-    />
-    {piece.players.length > 0 &&
-      piece.players.map((player, index) => {
-        const cardsFound = _.sumBy(player.censoredCards, (c) =>
-          c.found ? 1 : 0
-        )
-        const isPlayerTurn = playerInTurn.id === player.id
-
-        return (
-          <div
-            title={`${player.name}, ${cardsFound} / ${player.censoredCards.length} found`}
-            key={player.id}
-            style={{
-              top: '50%',
-              left: '50%',
-              transform: `translate(calc(-50% + ${index * 3}px), calc(-50% + ${
-                index * 3
-              }px))`,
-              height: '30%',
-              width: '30%',
-              opacity: piece.trophy ? 0.8 : 1,
-              borderRadius: '9999px',
-              background: player.color,
-              position: 'absolute',
-              ...(playerHasPushed && isPlayerTurn
-                ? {
-                    border: `2px solid white`,
-                    boxShadow: `0px 0px 0px 2px ${playerInTurn.color}`,
-                  }
-                : { border: `2px solid transparent` }),
-            }}
-          >
-            {gameState.me.id === player.id && (
-              <span
-                style={{
-                  position: 'absolute',
-                  left: '50%',
-                  top: '-25px',
-                  transform: 'translateX(-50%)',
-                  fontWeight: 'bold',
-                  fontSize: '15px',
-                  color: player.color,
-                  textTransform: 'uppercase',
-                  borderRadius: '20px',
-                  overflow: 'hidden',
-                  padding: '1px 5px',
-                  background: 'rgba(255, 255, 255, 0.8)',
-                }}
-              >
-                You
-              </span>
-            )}
-          </div>
-        )
-      })}
-  </div>
-)
 
 type PushPositionProps = {
   uiPushPosition: UIPushPosition
@@ -625,82 +509,4 @@ const BoardBackground = ({ pieceWidth }: { pieceWidth: number }) => (
   />
 )
 
-type ExtraPieceProps = {
-  onClickExtraPiece: () => void
-  position: t.Position
-  pieceWidth: number
-  piece: t.Piece
-  isMyTurn: boolean
-  playerHasPushed: boolean
-  playing: boolean
-  playerInTurn: t.CensoredPlayer
-  onMouseOver: React.DOMAttributes<HTMLDivElement>['onMouseOver']
-  onMouseOut: React.DOMAttributes<HTMLDivElement>['onMouseOut']
-}
-const ExtraPiece = ({
-  onClickExtraPiece,
-  isMyTurn,
-  pieceWidth,
-  playing,
-  piece,
-  playerInTurn,
-  playerHasPushed,
-  onMouseOut,
-  onMouseOver,
-}: ExtraPieceProps) => (
-  <div
-    onClick={() => playing && onClickExtraPiece()}
-    onMouseOut={onMouseOut}
-    onMouseOver={onMouseOver}
-    className={`ExtraPiece ${
-      isMyTurn && playing && !playerHasPushed ? 'cursor-pointer' : ''
-    }`}
-    style={{
-      userSelect: 'none',
-      position: 'absolute',
-      width: `${pieceWidth}px`,
-      height: `${pieceWidth}px`,
-      margin: 0,
-      padding: 0,
-      background: '#eee',
-    }}
-  >
-    <Piece
-      style={{
-        border: `1px solid transparent`,
-        transition: 'all 300ms ease',
-        boxShadow: `0px 0px 0px 2px ${
-          playing && !playerHasPushed ? playerInTurn.color : '#aaa'
-        }`,
-      }}
-      width={pieceWidth}
-      piece={piece}
-    />
-    <div
-      className="ExtraPiece__fader"
-      style={{
-        borderRadius: '5px',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        background: 'white',
-      }}
-    />
-    <RotateIcon
-      fill="#454545"
-      style={{
-        pointerEvents: 'none',
-        position: 'absolute',
-        zIndex: 10,
-        top: '50%',
-        left: '50%',
-        width: '30%',
-        transform: 'translate(-50%, -50%)',
-      }}
-    />
-  </div>
-)
-
-export default BoardComponent
+export default Board

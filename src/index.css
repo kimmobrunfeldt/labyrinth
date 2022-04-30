@@ -32,66 +32,6 @@ html,
   min-height: 100vh;
 }
 
-/* CSS */
-.button-50 {
-  appearance: button;
-  background-color: #857E77;
-  background-image: none;
-  border: 1px solid #857E77;
-  border-radius: 4px;
-  box-shadow: #fff 4px 4px 0 0, #857E77 4px 4px 0 1px;
-  box-sizing: border-box;
-  color: #fff;
-  cursor: pointer;
-  display: inline-block;
-  font-family: Arial, sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 20px;
-  margin: 0 5px 10px 0;
-  overflow: visible;
-  padding: 12px 40px;
-  text-align: center;
-  text-transform: none;
-  touch-action: manipulation;
-  user-select: none;
-  -webkit-user-select: none;
-  vertical-align: middle;
-  white-space: nowrap;
-}
-
-.button-50[disabled] {
-  background-color: #bbb;
-  border: 1px solid #bbb;
-  cursor: not-allowed;
-}
-
-.button-50.button-50-secondary {
-  background: none;
-  color: #857E77;
-  border: 1px solid #857E77;
-  box-shadow: #fff 4px 4px 0 0, rgba(133, 126, 119, 0.5) 4px 4px 0 1px;
-}
-
-.button-50.button-50-small {
-  padding: 6px 20px;
-}
-
-.button-50:focus {
-  text-decoration: none;
-}
-
-.button-50:hover {
-  text-decoration: none;
-}
-
-
-.button-50:active:not([disabled]) {
-  box-shadow: #fff 2px 2px 0 0, #857E77 2px 2px 0 1px;
-  transform: translate(2px, 2px);
-  box-shadow: rgba(0, 0, 0, .125) 0 3px 5px inset;
-  outline: 0;
-}
 
 .cursor-pointer {
   cursor: pointer;

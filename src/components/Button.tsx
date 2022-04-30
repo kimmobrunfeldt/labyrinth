@@ -1,12 +1,13 @@
 import React from 'react'
+import 'src/css/Button.css'
 
 export type Props = JSX.IntrinsicElements['button'] & {
   condensed?: boolean
 }
 
-export const Button = (props: Props) => (
+export const Button = ({ condensed, ...props }: Props) => (
   <button
-    className={`button-50  ${props.condensed ? 'button-50-small' : ''}`}
+    className={`Button  ${condensed ? 'Button--small' : ''}`}
     {...props}
   />
 )

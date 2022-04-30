@@ -11,6 +11,7 @@ import { PeerJsTransportClient } from 'src/utils/TransportClient'
 import { PeerJsTransportServer } from 'src/utils/TransportServer'
 import {
   getLogger,
+  getPlayerLabel,
   getRandomAdminToken,
   sleep,
   waitForEvent,
@@ -102,7 +103,7 @@ export async function createServer(
               }
 
               game.removePlayer(id)
-              sendMessage(`${player.name} disconnected (kicked)`)
+              sendMessage(`${getPlayerLabel(player)} disconnected (kicked)`)
             },
             changeSettings: async (settings: Partial<t.GameSettings>) => {
               game.changeSettings(settings)
@@ -139,7 +140,9 @@ export async function createServer(
         // This is sending the data twice for joined player
         await players[playerId].client.onJoin(getStateForPlayer(playerId))
         await sendStateToEveryone()
-        sendMessage(`${game.getPlayerById(playerId).name} reconnected`)
+        sendMessage(
+          `${getPlayerLabel(game.getPlayerById(playerId))} reconnected`
+        )
         return
       }
 
@@ -158,7 +161,7 @@ export async function createServer(
         return
       }
 
-      sendMessage(`${game.getPlayerById(playerId).name} connected`)
+      sendMessage(`${getPlayerLabel(game.getPlayerById(playerId))} connected`)
     },
     onClientDisconnect: async (playerId) => {
       logger.log(`Player '${playerId}' disconnected`)
@@ -175,7 +178,7 @@ export async function createServer(
         game.removePlayer(playerId)
       }
 
-      sendMessage(`${player.name} disconnected`)
+      sendMessage(`${getPlayerLabel(player)} disconnected`)
     },
   })
 
@@ -286,7 +289,7 @@ export async function createServer(
   async function turn() {
     const player = game.whosTurn()
     logger.log('Turn by', player.name)
-    sendMessage(`${player.name} turn`)
+    sendMessage(`${getPlayerLabel(player)} in turn`)
 
     const currentCardsStart = game.getPlayersCurrentCards(player.id)
     const turnCounterNow = game.getState().turnCounter

@@ -21,6 +21,16 @@ export function getRandomAdminToken(): string {
   return _.padStart(`${_.random(9999)}`, 4, '0')
 }
 
+export function colorToName(color: t.PlayerColor) {
+  return Object.entries(t.PlayerColor).find(
+    ([_key, val]) => val === color
+  )?.[0] as keyof typeof t.PlayerColor
+}
+
+export function getPlayerLabel(player: t.Player | t.CensoredPlayer): string {
+  return `${player.name} (${colorToName(player.color)})`
+}
+
 // TODO: implement turn skip on timeout
 export async function loopUntilSuccess<ArgsT>(
   fn: () => Promise<void>,
