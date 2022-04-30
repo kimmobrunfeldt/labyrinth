@@ -5,15 +5,20 @@ import { ExtraPiece } from 'src/components/ExtraPiece'
 import { CaretUp } from 'src/components/Icons'
 import { EmptyPiece, PIECE_MARGIN_PX } from 'src/components/Piece'
 import { PieceOnBoard } from 'src/components/PieceOnBoard'
-import { BOARD_PUSH_POSITIONS, getPushPosition } from 'src/core/board'
+import { PushPosition } from 'src/components/PushPosition'
+import { getPushPosition } from 'src/core/board'
 import { centered } from 'src/css'
+import 'src/css/Board.css'
 import * as t from 'src/gameTypes'
 import {
   boardPushPositionToUIPosition,
   directionToCaretRotation,
+  getIsMyTurn,
   hex2rgba,
-  oppositeUIPosition,
+  isBlockedBoardPushPosition,
+  isBlockedUiPushPosition,
   PIECE_SLOTS,
+  resolveExtraPiecePosition,
   UIPushPosition,
   UI_PUSH_POSITIONS,
 } from 'src/utils/uiUtils'
@@ -30,7 +35,7 @@ export type Props = {
   onClickExtraPiece: () => void
   extraPiece: t.Piece
   previousPushPosition?: t.PushPosition
-  pushPositionHover?: UIPushPosition
+  lastServerHover?: UIPushPosition
   isMyTurn: boolean
   playerInTurn: t.CensoredPlayer
   playerHasPushed: boolean
@@ -50,25 +55,21 @@ type PieceToRender =
 
 const Board = ({
   gameState,
-  board,
   onMove,
   onPush,
   onClickExtraPiece,
   boardPiecesStyles,
   extraPiece,
-  previousPushPosition: previousBoardPushPosition,
   onPushPositionHover,
-  pushPositionHover,
-  isMyTurn,
-  playerInTurn,
+  lastServerHover,
 }: Props) => {
-  const [lastHoveredPushPosition, setLastHoveredPushPosition] = useState<
+  const [lastLocalHover, setLastLocalHover] = useState<
     UIPushPosition | undefined
   >()
   const [hoveringPushPosition, setHoveringPushPosition] = useState<boolean>()
   const { ref, width = 0 } = useResizeDetector()
-
-  const { playerHasPushed } = gameState
+  const { playerHasPushed, board } = gameState
+  const isMyTurn = getIsMyTurn(gameState)
   const pieceWidth = Math.floor(
     (width - (PIECE_SLOTS - 1) * PIECE_MARGIN_PX) / PIECE_SLOTS
   )
@@ -84,14 +85,10 @@ const Board = ({
   const sortedPiecesToRender = _.sortBy(piecesToRender, (p) =>
     p.type === 'extra' ? p.extraPiece.id : p.piece?.id
   )
-
   const pushPlaceholdersForRender = _.compact(
     UI_PUSH_POSITIONS.map(({ x, y, direction }) => {
-      const prevUiPos = previousBoardPushPosition
-        ? boardPushPositionToUIPosition(previousBoardPushPosition)
-        : undefined
-      const blockedPos = prevUiPos ? oppositeUIPosition(prevUiPos) : undefined
-      if (blockedPos && blockedPos.x === x && blockedPos.y === y) {
+      const isBlocked = isBlockedUiPushPosition(gameState, { x, y })
+      if (isBlocked) {
         return null
       }
 
@@ -103,51 +100,22 @@ const Board = ({
     })
   )
 
-  const blockedPushPosition = previousBoardPushPosition
-    ? oppositeUIPosition(
-        boardPushPositionToUIPosition(previousBoardPushPosition)
-      )
-    : undefined
-
-  function getExtraPiecePosition() {
-    const prevUiPos = previousBoardPushPosition
-      ? boardPushPositionToUIPosition(previousBoardPushPosition)
-      : undefined
-    const defaultExtraPiecePos = prevUiPos
-      ? oppositeUIPosition(prevUiPos)
-      : { x: 0, y: 0 }
-
-    if (playerHasPushed) {
-      return defaultExtraPiecePos
-    }
-
-    const localOrServer = isMyTurn ? lastHoveredPushPosition : pushPositionHover
-    return localOrServer ?? defaultExtraPiecePos
-  }
-
-  const resolvedExtraPiecePos = getExtraPiecePosition()
-
   const boardContent = (
     <div>
       <BoardBackground pieceWidth={pieceWidth} />
 
       {pushPlaceholdersForRender.map((uiPushPosition) => {
-        const isBlocked =
-          blockedPushPosition &&
-          uiPushPosition.x === blockedPushPosition.x &&
-          uiPushPosition.y === blockedPushPosition.y
-
         return (
           <PushPosition
             key={`push-${uiPushPosition.x}-${uiPushPosition.y}`}
             pieceWidth={pieceWidth}
             uiPushPosition={uiPushPosition}
             onMouseOver={() => {
-              if (gameState.stage !== 'playing' || isBlocked) {
+              if (gameState.stage !== 'playing') {
                 return
               }
 
-              setLastHoveredPushPosition(uiPushPosition)
+              setLastLocalHover(uiPushPosition)
               onPushPositionHover(uiPushPosition)
               setHoveringPushPosition(true)
             }}
@@ -177,8 +145,9 @@ const Board = ({
             extraPiece,
             onClickExtraPiece,
             pieceWidth,
-            resolvedExtraPiecePos,
             setHoveringPushPosition,
+            lastServerHover,
+            lastLocalHover,
           })
 
           content = extra.content
@@ -197,26 +166,20 @@ const Board = ({
           if (!piece) {
             content = <EmptyPiece width={pieceWidth} />
           } else {
-            const pushPos = BOARD_PUSH_POSITIONS.find(
-              (p) => p.x === toRender.x && p.y === toRender.y
-            )
-            const uiPushPos = pushPos
-              ? boardPushPositionToUIPosition(pushPos)
-              : undefined
-            const isBlocked =
-              uiPushPos &&
-              blockedPushPosition &&
-              uiPushPos.x === blockedPushPosition.x &&
-              uiPushPos.y === blockedPushPosition.y
+            // toRender uses board coodrinates
+            const isBlocked = isBlockedBoardPushPosition(gameState, toRender)
+            const uiPushPos = boardPushPositionToUIPosition(toRender)
 
+            // Should we interact in general? Some hovers still need to consider blockage separately.
             const shouldInteract =
-              gameState.stage === 'playing' && !playerHasPushed && !isBlocked
+              gameState.stage === 'playing' && !playerHasPushed
 
             const isBeingHovered =
-              lastHoveredPushPosition &&
+              hoveringPushPosition &&
               uiPushPos &&
-              lastHoveredPushPosition.x === uiPushPos.x &&
-              lastHoveredPushPosition.y === uiPushPos.y
+              lastLocalHover &&
+              lastLocalHover.x === uiPushPos.x &&
+              lastLocalHover.y === uiPushPos.y
 
             const alpha = isBeingHovered ? 1 : 0.5
 
@@ -226,8 +189,9 @@ const Board = ({
               hoverUiPushPosition:
                 shouldInteract &&
                 hoveringPushPosition &&
-                lastHoveredPushPosition
-                  ? lastHoveredPushPosition
+                lastLocalHover &&
+                isMyTurn
+                  ? lastLocalHover
                   : undefined,
             })
             containerStyle = {
@@ -237,23 +201,21 @@ const Board = ({
                     transform: `translate(${newTransform.x}px, ${newTransform.y}px)`,
                   }
                 : {}),
-              zIndex: pushPos ? 90 : 5,
-              cursor: shouldInteract ? 'pointer' : 'default',
+              zIndex: uiPushPos ? 90 : 5,
+              cursor: isBlocked
+                ? 'not-allowed'
+                : uiPushPos && shouldInteract && isMyTurn
+                ? 'pointer'
+                : 'default',
 
               boxShadow:
-                shouldInteract &&
-                isBeingHovered &&
-                hoveringPushPosition &&
-                !isBlocked
+                shouldInteract && isBeingHovered && isMyTurn && !isBlocked
                   ? `0 0 0 2px ${hex2rgba(gameState.me.color, alpha)}`
                   : `0 0 0 2px transparent`,
             }
 
             const showCaret =
-              shouldInteract &&
-              isBeingHovered &&
-              hoveringPushPosition &&
-              uiPushPos
+              shouldInteract && isBeingHovered && isMyTurn && !isBlocked
             content = (
               <div
                 style={{
@@ -267,8 +229,6 @@ const Board = ({
                   pieceWidth={pieceWidth}
                   piece={piece}
                   gameState={gameState}
-                  playerInTurn={playerInTurn}
-                  playerHasPushed={playerHasPushed}
                   onClick={() => {
                     if (playerHasPushed) {
                       onMove(piece)
@@ -286,39 +246,28 @@ const Board = ({
                     }
 
                     setHoveringPushPosition(true)
-                    setLastHoveredPushPosition(uiPushPos)
+                    setLastLocalHover(uiPushPos)
                     onPushPositionHover(uiPushPos)
                   }}
                   onMouseOut={() => setHoveringPushPosition(false)}
                 />
 
-                <div
+                <CaretUp
                   style={{
-                    ...centered(),
+                    ...centered(
+                      uiPushPos
+                        ? `rotate(${directionToCaretRotation(
+                            uiPushPos.direction
+                          )}deg)`
+                        : undefined
+                    ),
                     pointerEvents: 'none',
-                    width: '40%',
-                    height: '40%',
-                    opacity: showCaret ? 1 : 0,
                     transition: 'all 400ms ease',
-                    borderRadius: '999px',
-                    // border: `2px solid ${gameState.me.color}`,
+                    width: '20%',
+                    opacity: showCaret ? 1 : 0,
                   }}
-                >
-                  <CaretUp
-                    style={{
-                      ...centered(
-                        uiPushPos
-                          ? `rotate(${directionToCaretRotation(
-                              uiPushPos.direction
-                            )}deg)`
-                          : undefined
-                      ),
-
-                      width: '60%',
-                    }}
-                    fill={gameState.me.color}
-                  />
-                </div>
+                  fill={gameState.me.color}
+                />
               </div>
             )
           }
@@ -402,29 +351,34 @@ function getPieceTransform({
 }
 
 function getExtraPieceContent({
-  resolvedExtraPiecePos,
+  lastServerHover,
+  lastLocalHover,
   pieceWidth,
   onClickExtraPiece,
   extraPiece,
   gameState,
   setHoveringPushPosition,
 }: {
+  lastServerHover?: UIPushPosition
+  lastLocalHover?: UIPushPosition
   toRender: PieceToRender
-  resolvedExtraPiecePos: t.Position
   pieceWidth: number
   onClickExtraPiece: Props['onClickExtraPiece']
   extraPiece: t.Piece
   gameState: t.ClientGameState
   setHoveringPushPosition: (val: boolean) => void
 }) {
+  const resolvedPosition = resolveExtraPiecePosition(
+    gameState,
+    lastServerHover,
+    lastLocalHover
+  )
   return {
     containerStyle: {
       transform: `translate(${
-        PIECE_MARGIN_PX +
-        resolvedExtraPiecePos.x * (pieceWidth + PIECE_MARGIN_PX)
+        PIECE_MARGIN_PX + resolvedPosition.x * (pieceWidth + PIECE_MARGIN_PX)
       }px, ${
-        PIECE_MARGIN_PX +
-        resolvedExtraPiecePos.y * (pieceWidth + PIECE_MARGIN_PX)
+        PIECE_MARGIN_PX + resolvedPosition.y * (pieceWidth + PIECE_MARGIN_PX)
       }px)`,
       zIndex: 1000,
     } as React.CSSProperties,
@@ -435,65 +389,13 @@ function getExtraPieceContent({
         onClickExtraPiece={onClickExtraPiece}
         onMouseOver={() => setHoveringPushPosition(true)}
         onMouseOut={() => setHoveringPushPosition(false)}
-        position={resolvedExtraPiecePos}
+        position={resolvedPosition}
         pieceWidth={pieceWidth}
         piece={extraPiece}
       />
     ),
   }
 }
-
-type PushPositionProps = {
-  uiPushPosition: UIPushPosition
-  pieceWidth: number
-  onMouseOver: React.DOMAttributes<HTMLDivElement>['onMouseOver']
-  onMouseOut: React.DOMAttributes<HTMLDivElement>['onMouseOut']
-}
-
-const PushPosition = ({
-  pieceWidth,
-  uiPushPosition,
-  onMouseOver,
-  onMouseOut,
-}: PushPositionProps) => (
-  <div
-    style={{
-      position: 'absolute',
-      transform: `translate(${
-        PIECE_MARGIN_PX + uiPushPosition.x * (pieceWidth + PIECE_MARGIN_PX)
-      }px, ${
-        PIECE_MARGIN_PX + uiPushPosition.y * (pieceWidth + PIECE_MARGIN_PX)
-      }px)`,
-      width: `${pieceWidth}px`,
-      height: `${pieceWidth}px`,
-      transition: 'transform 600ms ease',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-    }}
-    onMouseOver={onMouseOver}
-    onMouseOut={onMouseOut}
-  >
-    <div
-      style={{
-        ...centered(),
-        width: '50%',
-        height: '50%',
-        background: '#f9f9f9',
-        borderRadius: `${pieceWidth * 0.1}px`,
-      }}
-    ></div>
-    <CaretUp
-      style={{
-        ...centered(
-          `rotate(${directionToCaretRotation(uiPushPosition.direction)}deg)`
-        ),
-        width: '20%',
-      }}
-      fill="#CCC5AE"
-    />
-  </div>
-)
 
 const BoardBackground = ({ pieceWidth }: { pieceWidth: number }) => (
   <div

@@ -109,6 +109,25 @@ export function wrapWithLogging<
   }) as T
 }
 
+export function wrapAdminMethods<
+  T extends { [key: string]: (...args: any[]) => any }
+>(
+  methods: T,
+  serverAdminToken: string
+): {
+  [K in keyof T]: (token: string, ...args: Parameters<T[K]>) => ReturnType<T[K]>
+} {
+  return _.mapValues(methods, (fn) => {
+    return (token: string, ...args: any[]) => {
+      if (token !== serverAdminToken) {
+        throw new Error('Admin command not authorized')
+      }
+
+      return fn(...args)
+    }
+  })
+}
+
 export const format = {
   pos: (pos: t.Position) => {
     return `[${pos.x}, ${pos.y}]`

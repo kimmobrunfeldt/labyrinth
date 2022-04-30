@@ -30,6 +30,7 @@ export const PlayerOnBoard = ({
       style={{
         zIndex: 900,
         width: '100%',
+        pointerEvents: 'none',
         height: '100%',
         opacity: piece.trophy ? 0.8 : 1,
         borderRadius: '9999px',
@@ -58,6 +59,7 @@ export const PlayerOnBoard = ({
             overflow: 'hidden',
             padding: '1px 5px',
             background: 'rgba(255, 255, 255, 0.8)',
+            whiteSpace: 'nowrap',
           }}
         >
           {gameState.me.id === player.id ? 'You' : player.name}

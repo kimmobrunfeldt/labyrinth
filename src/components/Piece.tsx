@@ -7,6 +7,7 @@ import { Piece, PieceOnBoard, Type } from 'src/gameTypes'
 import { usePrevious } from 'src/utils/uiUtils'
 
 export const PIECE_MARGIN_PX = 2
+export const PIECE_BORDER_RADIUS = '5px'
 
 const pieceToSvg: Record<Type, string> = {
   straight: straight,
@@ -14,14 +15,14 @@ const pieceToSvg: Record<Type, string> = {
   't-shape': tShape,
 }
 
-function getSharedStyles(width: number): React.CSSProperties {
+export function getSharedStyles(width: number): React.CSSProperties {
   return {
     width: `${width}px`,
     height: `${width}px`,
     display: 'inline-block',
     margin: 0,
     padding: 0,
-    borderRadius: '5px',
+    borderRadius: PIECE_BORDER_RADIUS,
     overflow: 'hidden',
   }
 }
@@ -40,14 +41,9 @@ function PieceComponent<T extends Piece | PieceOnBoard>({
   const [rotation, setRotation] = useState<number>(piece.rotation)
   const prevPiece = usePrevious(piece)
 
+  // Make rotation smooth
   useEffect(() => {
-    const prevPieceRotation = prevPiece?.rotation ?? piece.rotation
-    const newPieceRotation = piece.rotation
-    const addRotation =
-      newPieceRotation >= prevPieceRotation
-        ? newPieceRotation - prevPieceRotation
-        : 360 - prevPieceRotation + newPieceRotation
-
+    const addRotation = findShortestRotation(piece, prevPiece)
     setRotation((r) => r + addRotation)
   }, [prevPiece, piece, piece.rotation])
 
@@ -59,9 +55,8 @@ function PieceComponent<T extends Piece | PieceOnBoard>({
       onClick={() => onClick && onClick(piece)}
       style={{
         ...sharedStyles,
-        // transform: `rotate(${Math.random() * 1.5}deg)`,
         transformOrigin: '50% 50%',
-        transition: 'transform 150ms ease',
+        transition: 'transform 250ms ease',
         transform: `rotate(${rotation}deg)`,
         ...style,
       }}
@@ -103,6 +98,17 @@ function PieceComponent<T extends Piece | PieceOnBoard>({
       </div>
     </div>
   )
+}
+
+function findShortestRotation(
+  piece: t.Piece | t.CensoredPieceOnBoard,
+  prevPiece?: t.Piece | t.CensoredPieceOnBoard
+): number {
+  const prevPieceRotation = prevPiece?.rotation ?? piece.rotation
+  const newPieceRotation = piece.rotation
+  return newPieceRotation >= prevPieceRotation
+    ? newPieceRotation - prevPieceRotation
+    : 360 - prevPieceRotation + newPieceRotation
 }
 
 function getTrophyRotation(type: t.Piece['type']): t.Rotation {

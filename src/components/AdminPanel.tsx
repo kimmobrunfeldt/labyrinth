@@ -18,6 +18,7 @@ export type Props = {
 }
 
 const ESCAPE_KEY = 27
+
 const AdminPanel = ({
   open,
   onStartGameClick,
@@ -28,7 +29,7 @@ const AdminPanel = ({
   onSettingsChange,
   onCloseClick,
 }: Props) => {
-  useOnKeyDown(27, onCloseClick)
+  useOnKeyDown(ESCAPE_KEY, onCloseClick)
 
   return (
     <>
@@ -39,7 +40,7 @@ const AdminPanel = ({
           height: '100%',
           position: 'fixed',
           overflow: 'auto',
-          zIndex: '900',
+          zIndex: 1100,
           boxShadow: open ? '5px 5px 15px rgba(133, 126, 119, 0.4)' : undefined,
           borderTop: '6px solid #857E77',
           background: 'white',

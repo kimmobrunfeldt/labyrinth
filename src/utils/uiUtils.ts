@@ -1,6 +1,6 @@
 import _ from 'lodash'
 import { useEffect, useRef } from 'react'
-import { BOARD_PUSH_POSITIONS } from 'src/core/board'
+import { assertDefined, BOARD_PUSH_POSITIONS } from 'src/core/board'
 import * as t from 'src/gameTypes'
 import { oppositeIndex } from 'src/utils/utils'
 
@@ -33,7 +33,9 @@ export const UI_PUSH_POSITIONS: UIPushPosition[] = [
   { x: 0, y: 2, direction: 'right' },
 ]
 
-export function boardPushPositionToUIPosition(pos: t.Position): UIPushPosition {
+export function boardPushPositionToUIPosition(
+  pos: t.Position
+): UIPushPosition | undefined {
   const index = _.findIndex(
     BOARD_PUSH_POSITIONS,
     (pPos) => pPos.x === pos.x && pPos.y === pos.y
@@ -41,7 +43,9 @@ export function boardPushPositionToUIPosition(pos: t.Position): UIPushPosition {
   return UI_PUSH_POSITIONS[index]
 }
 
-export function uiPushPositionToBoard(pos: UIPushPosition): t.PushPosition {
+export function uiPushPositionToBoard(
+  pos: UIPushPosition
+): t.PushPosition | undefined {
   const index = _.findIndex(
     UI_PUSH_POSITIONS,
     (pPos) => pPos.x === pos.x && pPos.y === pos.y
@@ -98,4 +102,98 @@ export function getPlayerInTurn(
 
 export function getIsMyTurn(gameState: t.ClientGameState): boolean {
   return gameState.me.id === getPlayerInTurn(gameState).id
+}
+
+/**
+ * Returns if given push position blocked based on previous move.
+ *
+ * Note: uses UI coordinates (extra padding around the board).
+ */
+export function isBlockedUiPushPosition(
+  gameState: t.ClientGameState,
+  position: t.Position
+): boolean {
+  const { previousPushPosition } = gameState
+  if (!previousPushPosition) {
+    // No moves done yet
+    return false
+  }
+
+  const blockedUiPushPos =
+    getUiPushPositionBasedOnPreviousPush(previousPushPosition)
+  return position.x === blockedUiPushPos.x && position.y === blockedUiPushPos.y
+}
+
+/**
+ * Returns if given push position blocked based on previous move.
+ *
+ * Note: takes position in UI coordinates!
+ */
+export function isBlockedBoardPushPosition(
+  gameState: t.ClientGameState,
+  position: t.Position
+): boolean {
+  const { previousPushPosition } = gameState
+  if (!previousPushPosition) {
+    // No moves done yet
+    return false
+  }
+
+  const uiPushPos = boardPushPositionToUIPosition(position)
+  if (!uiPushPos) {
+    // Position is not a valid board push position
+    return false
+  }
+  return isBlockedUiPushPosition(gameState, uiPushPos)
+}
+
+export function boardToUiCoordinates(position: t.Position): t.Position {
+  return { x: position.x + 1, y: position.y + 1 }
+}
+
+export function uiToBoardCoordinates(position: t.Position): t.Position {
+  return { x: position.x - 1, y: position.y - 1 }
+}
+
+const createSetupExtraPiecePosition = () => ({ x: 0, y: 0 })
+
+/**
+ * Resolves the Position in UI coordinages for extra piece,
+ * given the local and server state.
+ */
+export function resolveExtraPiecePosition(
+  gameState: t.ClientGameState,
+  lastServerHover?: t.Position,
+  lastLocalHover?: t.Position
+): t.Position {
+  const { previousPushPosition, stage, playerHasPushed } = gameState
+  if (stage === 'setup') {
+    return createSetupExtraPiecePosition()
+  }
+
+  const basedOnPrevPush = previousPushPosition
+    ? getUiPushPositionBasedOnPreviousPush(previousPushPosition)
+    : undefined
+
+  // If the player has pushed (you or any other), ignore all hoverings
+  if (playerHasPushed) {
+    return basedOnPrevPush ?? createSetupExtraPiecePosition()
+  }
+
+  // If it's your turn, prefer your local hovering. Ignore server hovers.
+  if (getIsMyTurn(gameState)) {
+    return lastLocalHover ?? basedOnPrevPush ?? createSetupExtraPiecePosition()
+  }
+
+  // If not your turn, prever server hovering. Ignore local hovers.
+  return lastServerHover ?? basedOnPrevPush ?? createSetupExtraPiecePosition()
+}
+
+function getUiPushPositionBasedOnPreviousPush(
+  previousPushPosition: t.PushPosition
+): UIPushPosition {
+  const prevUiPushPos = assertDefined(
+    boardPushPositionToUIPosition(previousPushPosition)
+  )
+  return oppositeUIPosition(prevUiPushPos)
 }

@@ -2,7 +2,7 @@ import _ from 'lodash'
 import * as algo from 'src/core/algorithms'
 import {
   assertDefined,
-  getOppositePushPosition,
+  getOppositePosition,
   getPieceAt,
   isValidPlayerMove,
   pushWithPiece,
@@ -246,7 +246,7 @@ export function createGame(opts: CreateGameOptions) {
     }
 
     if (game.previousPushPosition) {
-      const opposite = getOppositePushPosition(
+      const opposite = getOppositePosition(
         game.board.pieces.length,
         game.previousPushPosition
       )

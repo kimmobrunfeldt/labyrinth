@@ -7,8 +7,6 @@ export type Props = JSX.IntrinsicElements['div'] & {
   piece: t.CensoredPieceOnBoard
   style?: React.CSSProperties
   pieceWidth: number
-  playerInTurn: t.CensoredPlayer
-  playerHasPushed: boolean
   gameState: t.ClientGameState
 }
 

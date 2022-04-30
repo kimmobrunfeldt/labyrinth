@@ -1,0 +1,13 @@
+.ExtraPiece__fader,
+.ExtraPiece .RotateIcon {
+  opacity: 0;
+  transition: opacity 250ms ease;
+}
+
+:not(.Board--has-pushed).Board--playing.Board--myturn .ExtraPiece:hover .ExtraPiece__fader {
+  opacity: 0.5;
+}
+
+:not(.Board--has-pushed).Board--playing.Board--myturn .ExtraPiece:hover .RotateIcon {
+  opacity: 1;
+}

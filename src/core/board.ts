@@ -629,7 +629,7 @@ export function getPushPosition(pos: Position): PushPosition {
   )
 }
 
-export function getOppositePushPosition(
+export function getOppositePosition(
   boardWidth: number,
   pos: PushPosition
 ): PushPosition {

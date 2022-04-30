@@ -1,6 +1,6 @@
 import React from 'react'
 import { RotateIcon } from 'src/components/Icons'
-import Piece from 'src/components/Piece'
+import Piece, { PIECE_BORDER_RADIUS } from 'src/components/Piece'
 import * as t from 'src/gameTypes'
 import { getIsMyTurn, getPlayerInTurn } from 'src/utils/uiUtils'
 
@@ -43,13 +43,23 @@ export const ExtraPiece = ({
         background: '#eee',
       }}
     >
+      <div
+        style={{
+          position: 'absolute',
+          top: '-1px',
+          left: '-1px',
+          borderRadius: PIECE_BORDER_RADIUS,
+          width: 'calc(100% + 2px)',
+          height: 'calc(100% + 2px)',
+          border: `2px solid ${
+            playing && !playerHasPushed ? playerInTurn.color : '#aaa'
+          }`,
+        }}
+      />
       <Piece
         style={{
           border: `1px solid transparent`,
           transition: 'all 300ms ease',
-          outline: `2px solid ${
-            playing && !playerHasPushed ? playerInTurn.color : '#aaa'
-          }`,
         }}
         width={pieceWidth}
         piece={piece}

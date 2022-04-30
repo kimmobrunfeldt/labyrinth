@@ -59,7 +59,7 @@ export const GameClient = (props: Props) => {
   const [gameState, setGameState] = useState<ClientGameState | undefined>(
     undefined
   )
-  const [pushPositionHover, setPushPositionHover] = useState<
+  const [lastServerHover, setLastServerHover] = useState<
     UIPushPosition | undefined
   >(undefined)
   const [messages, setMessages] = useState<Message[]>(
@@ -109,7 +109,7 @@ export const GameClient = (props: Props) => {
           const uiPos = boardPos
             ? boardPushPositionToUIPosition(boardPos)
             : undefined
-          setPushPositionHover(uiPos)
+          setLastServerHover(uiPos)
         },
         onServerReject: async (message) => {
           console.error('Rejected by server', message)
@@ -310,7 +310,7 @@ export const GameClient = (props: Props) => {
           onPush={onPush}
           onClickExtraPiece={onClickExtraPiece}
           previousPushPosition={gameState.previousPushPosition}
-          pushPositionHover={pushPositionHover}
+          lastServerHover={lastServerHover}
           onPushPositionHover={onPushPositionHover}
           isMyTurn={isMyTurn()}
           playerHasPushed={gameState.playerHasPushed}

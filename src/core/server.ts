@@ -1,4 +1,3 @@
-import _ from 'lodash'
 import MoleClient from 'mole-rpc/MoleClientProxified'
 import MoleServer from 'mole-rpc/MoleServer'
 import Peer, { DataConnection } from 'peerjs'
@@ -15,6 +14,7 @@ import {
   getRandomAdminToken,
   sleep,
   waitForEvent,
+  wrapAdminMethods,
   wrapWithLogging,
 } from 'src/utils/utils'
 
@@ -411,21 +411,4 @@ async function _createServerNetworking(
     peer,
     peerId: openedPeerId,
   }
-}
-
-function wrapAdminMethods<T extends { [key: string]: (...args: any[]) => any }>(
-  methods: T,
-  serverAdminToken: string
-): {
-  [K in keyof T]: (token: string, ...args: Parameters<T[K]>) => ReturnType<T[K]>
-} {
-  return _.mapValues(methods, (fn) => {
-    return (token: string, ...args: any[]) => {
-      if (token !== serverAdminToken) {
-        throw new Error('Admin command not authorized')
-      }
-
-      return fn(...args)
-    }
-  })
 }
