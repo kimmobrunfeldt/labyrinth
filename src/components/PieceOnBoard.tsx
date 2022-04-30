@@ -46,6 +46,7 @@ export const PieceOnBoard = ({
             <div
               key={player.id}
               style={{
+                zIndex: 900,
                 top: '50%',
                 left: '50%',
                 transform: `translate(calc(-50% + ${
