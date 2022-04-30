@@ -201,7 +201,6 @@ const Board = ({
                     transform: `translate(${newTransform.x}px, ${newTransform.y}px)`,
                   }
                 : {}),
-              zIndex: uiPushPos ? 90 : 5,
               cursor: isBlocked
                 ? 'not-allowed'
                 : uiPushPos && shouldInteract && isMyTurn
