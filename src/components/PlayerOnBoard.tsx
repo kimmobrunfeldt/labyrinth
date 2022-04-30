@@ -45,6 +45,7 @@ export const PlayerOnBoard = ({
         <span
           style={{
             position: 'absolute',
+            zIndex: 90000,
             left: '50%',
             top: '-25px',
             transform: 'translateX(-50%)',
