@@ -28,6 +28,7 @@ export const PlayerOnBoard = ({
       title={`${player.name}, ${cardsFound} / ${player.censoredCards.length} found`}
       key={player.id}
       style={{
+        zIndex: 900,
         width: '100%',
         height: '100%',
         opacity: piece.trophy ? 0.8 : 1,
@@ -45,7 +46,7 @@ export const PlayerOnBoard = ({
         <span
           style={{
             position: 'absolute',
-            zIndex: 90000,
+            zIndex: 900,
             left: '50%',
             top: '-25px',
             transform: 'translateX(-50%)',

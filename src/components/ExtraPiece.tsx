@@ -47,7 +47,7 @@ export const ExtraPiece = ({
         style={{
           border: `1px solid transparent`,
           transition: 'all 300ms ease',
-          boxShadow: `0px 0px 0px 2px ${
+          outline: `2px solid ${
             playing && !playerHasPushed ? playerInTurn.color : '#aaa'
           }`,
         }}

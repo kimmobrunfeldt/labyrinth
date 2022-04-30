@@ -426,7 +426,7 @@ function getExtraPieceContent({
         PIECE_MARGIN_PX +
         resolvedExtraPiecePos.y * (pieceWidth + PIECE_MARGIN_PX)
       }px)`,
-      zIndex: 100,
+      zIndex: 1000,
     } as React.CSSProperties,
     content: (
       <ExtraPiece
