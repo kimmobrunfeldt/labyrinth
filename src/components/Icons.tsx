@@ -41,3 +41,23 @@ export const CaretUp = ({
     />
   </svg>
 )
+
+export const CrossIcon = ({
+  style,
+  fill,
+}: {
+  style: React.CSSProperties
+  fill: string
+}) => (
+  <div
+    className="CrossIcon"
+    style={{
+      color: fill,
+      fontWeight: 'bold',
+      fontSize: '24px',
+      ...style,
+    }}
+  >
+    {'×'}
+  </div>
+)

@@ -76,3 +76,16 @@ export const hex2rgba = (hex: string, alpha = 1) => {
   const [r, g, b] = matches.map((x) => parseInt(x, 16))
   return `rgba(${r},${g},${b},${alpha})`
 }
+
+export function directionToCaretRotation(direction: t.Direction): t.Rotation {
+  switch (direction) {
+    case 'up':
+      return 0
+    case 'right':
+      return 90
+    case 'down':
+      return 180
+    case 'left':
+      return 270
+  }
+}

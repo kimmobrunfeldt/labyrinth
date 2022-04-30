@@ -1,6 +1,10 @@
-import React, { useEffect } from 'react'
+import React from 'react'
+import { Button } from 'src/components/Button'
+import { FormLabel } from 'src/components/FormLabel'
+import { CrossIcon } from 'src/components/Icons'
 import { Select } from 'src/components/Select'
 import * as t from 'src/gameTypes'
+import { useOnKeyDown } from 'src/useOnKeyDown'
 
 export type Props = {
   open: boolean
@@ -13,6 +17,7 @@ export type Props = {
   onCloseClick: () => void
 }
 
+const ESCAPE_KEY = 27
 const AdminPanel = ({
   open,
   onStartGameClick,
@@ -23,18 +28,7 @@ const AdminPanel = ({
   onSettingsChange,
   onCloseClick,
 }: Props) => {
-  useEffect(() => {
-    function keyDown(e: KeyboardEvent) {
-      if (e.keyCode === 27) {
-        onCloseClick()
-      }
-    }
-
-    document.addEventListener('keydown', keyDown)
-    return () => {
-      document.removeEventListener('keydown', keyDown)
-    }
-  }, [onCloseClick])
+  useOnKeyDown(27, onCloseClick)
 
   return (
     <>
@@ -65,13 +59,13 @@ const AdminPanel = ({
             transition: 'all 400ms ease',
             padding: '8px 14px',
             cursor: 'pointer',
-            color: '#857E77',
-            fontWeight: 'bold',
-            fontSize: open ? '24px' : '30px',
           }}
           onClick={onCloseClick}
         >
-          {'×'}
+          <CrossIcon
+            fill="#857E77"
+            style={{ fontSize: open ? '24px' : '30px' }}
+          />
         </div>
         <div style={{ padding: '18px 20px', height: '100%' }}>
           <div
@@ -90,20 +84,16 @@ const AdminPanel = ({
                 Admin panel
               </h2>
 
-              <div style={{ paddingTop: '10px', paddingBottom: '20px' }}>
+              <FormSection>
                 <Subtitle>Settings</Subtitle>
-                <div style={{ marginTop: '15px' }}>
-                  <label
-                    style={{
-                      display: 'block',
-                      marginBottom: '6px',
-                      fontSize: '14px',
-                      color: '#666',
-                    }}
-                  >
+
+                <FormItem>
+                  <FormLabel htmlFor="trophies-select">
                     Trophies to find
-                  </label>
+                  </FormLabel>
+
                   <Select
+                    id="trophies-select"
                     disabled={gameState.stage !== 'setup'}
                     value={String(gameState.settings.trophyCount)}
                     onChange={(value) =>
@@ -115,19 +105,14 @@ const AdminPanel = ({
                       { value: '5', label: '5 trophies' },
                     ]}
                   />
-                </div>
-                <div style={{ marginTop: '15px' }}>
-                  <label
-                    style={{
-                      display: 'block',
-                      marginBottom: '6px',
-                      fontSize: '14px',
-                      color: '#666',
-                    }}
-                  >
+                </FormItem>
+
+                <FormItem>
+                  <FormLabel htmlFor="difficulty-select">
                     Difficulty level
-                  </label>
+                  </FormLabel>
                   <Select
+                    id="difficulty-select"
                     disabled={gameState.stage !== 'setup'}
                     value={gameState.settings.shuffleLevel}
                     onChange={(value) =>
@@ -138,13 +123,13 @@ const AdminPanel = ({
                     options={[
                       { value: 'easy', label: 'Easy ' },
                       { value: 'hard', label: 'Intermediate' },
-                      { value: 'perfect', label: 'Hard (slow)' },
+                      { value: 'perfect', label: 'Hard' },
                     ]}
                   />
-                </div>
-              </div>
+                </FormItem>
+              </FormSection>
 
-              <div style={{ padding: '20px 0 0 0' }}>
+              <FormSection>
                 <Subtitle>Players</Subtitle>
                 {gameState.players.map((p) => {
                   return (
@@ -196,17 +181,18 @@ const AdminPanel = ({
                   )
                 })}
                 {gameState.stage === 'setup' && gameState.players.length < 4 && (
-                  <div style={{ marginTop: '10px' }}>
+                  <FormItem>
                     <Select
                       placeholder="Add bot"
                       value={''}
                       onChange={(value) => onAddBot(value as t.BotName)}
                       options={[{ value: 'random', label: 'Random bot' }]}
                     />
-                  </div>
+                  </FormItem>
                 )}
-              </div>
+              </FormSection>
             </div>
+
             <div
               style={{
                 padding: '35px 0',
@@ -214,8 +200,8 @@ const AdminPanel = ({
                 justifyContent: 'center',
               }}
             >
-              <button
-                className="button-50 button-50-small"
+              <Button
+                condensed
                 onClick={
                   gameState.stage === 'setup'
                     ? onStartGameClick
@@ -223,7 +209,7 @@ const AdminPanel = ({
                 }
               >
                 {gameState.stage === 'setup' ? 'Start game' : 'Restart game'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -232,6 +218,18 @@ const AdminPanel = ({
   )
 }
 
+export type FormItemProps = JSX.IntrinsicElements['div']
+const FormItem = (props: FormItemProps) => (
+  <div {...props} style={{ ...props.style, marginTop: '15px' }} />
+)
+
+export type FormSectionProps = JSX.IntrinsicElements['div']
+const FormSection = (props: FormSectionProps) => (
+  <div
+    {...props}
+    style={{ ...props.style, paddingTop: '10px', paddingBottom: '20px' }}
+  />
+)
 const Subtitle = ({ children }: { children: React.ReactNode }) => (
   <h3
     style={{

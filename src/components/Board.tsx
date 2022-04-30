@@ -12,6 +12,7 @@ import { centered } from 'src/css'
 import * as t from 'src/gameTypes'
 import {
   boardPushPositionToUIPosition,
+  directionToCaretRotation,
   hex2rgba,
   oppositeUIPosition,
   PIECE_SLOTS,
@@ -35,19 +36,6 @@ export type Props = {
   isMyTurn: boolean
   playerInTurn: t.CensoredPlayer
   playerHasPushed: boolean
-}
-
-function directionToCaretRotation(direction: t.Direction): t.Rotation {
-  switch (direction) {
-    case 'up':
-      return 0
-    case 'right':
-      return 90
-    case 'down':
-      return 180
-    case 'left':
-      return 270
-  }
 }
 
 type PieceToRender =

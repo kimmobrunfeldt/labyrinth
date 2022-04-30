@@ -1,8 +1,7 @@
 import React from 'react'
 import 'src/css/Select.css'
 
-type Props = {
-  value: string
+type Props = JSX.IntrinsicElements['select'] & {
   placeholder?: string
   disabled?: boolean
   onChange: (value: string) => void
@@ -15,8 +14,10 @@ export const Select = ({
   onChange,
   options,
   placeholder,
+  ...props
 }: Props) => (
   <select
+    {...props}
     disabled={disabled}
     value={value}
     onChange={(e) => !disabled && onChange(e.target.value)}

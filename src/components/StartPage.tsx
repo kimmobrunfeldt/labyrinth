@@ -1,4 +1,5 @@
 import React from 'react'
+import { Button } from 'src/components/Button'
 
 export type Props = {
   onHostGame: () => void
@@ -42,9 +43,7 @@ const StartPage = ({ onHostGame, onJoinGame }: Props) => {
             maxWidth: '150px',
           }}
         >
-          <button className="button-50" onClick={onHostGame}>
-            Host game
-          </button>
+          <Button onClick={onHostGame}>Host game</Button>
           <span
             style={{
               marginTop: '12px',
@@ -66,9 +65,7 @@ const StartPage = ({ onHostGame, onJoinGame }: Props) => {
             maxWidth: '150px',
           }}
         >
-          <button className="button-50" onClick={onJoinClick}>
-            Join game
-          </button>
+          <Button onClick={onJoinClick}>Join game</Button>
           <span
             style={{
               marginTop: '12px',
