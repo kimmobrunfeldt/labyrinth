@@ -3,7 +3,11 @@ import React, { useState } from 'react'
 import { useResizeDetector } from 'react-resize-detector'
 import { CaretUp, RotateIcon } from 'src/components/Icons'
 import Piece, { EmptyPiece, PIECE_MARGIN_PX } from 'src/components/Piece'
-import { BOARD_PUSH_POSITIONS, getPushPosition } from 'src/core/board'
+import {
+  BOARD_PUSH_POSITIONS,
+  getOppositeDirection,
+  getPushPosition,
+} from 'src/core/board'
 import { centered } from 'src/css'
 import * as t from 'src/gameTypes'
 import {
@@ -220,7 +224,10 @@ const BoardComponent = ({
               uiPushPos &&
               blockedPushPosition &&
               uiPushPos.x === blockedPushPosition.x &&
-              uiPushPos.y === blockedPushPosition.y
+              uiPushPos.y === blockedPushPosition.y &&
+              lastHoveredPushPosition &&
+              lastHoveredPushPosition.direction ===
+                getOppositeDirection(blockedPushPosition.direction)
             const shouldInteract =
               gameState.stage === 'playing' && !playerHasPushed && !isBlocked
 
@@ -231,6 +238,7 @@ const BoardComponent = ({
               lastHoveredPushPosition.y === uiPushPos.y
 
             const alpha = isBeingHovered ? 1 : 0.5
+
             const newTransform = getPieceTransform({
               boardPosition: toRender,
               pieceWidth,
@@ -548,9 +556,10 @@ const BoardPiece = ({
                   fontSize: '15px',
                   color: player.color,
                   textTransform: 'uppercase',
-                  borderRadius: '7px',
+                  borderRadius: '20px',
+                  overflow: 'hidden',
                   padding: '1px 5px',
-                  background: 'rgba(255, 255, 255, 0.7)',
+                  background: 'rgba(255, 255, 255, 0.8)',
                 }}
               >
                 You

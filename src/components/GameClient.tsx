@@ -395,10 +395,12 @@ const CurrentTrophy = ({ trophy }: { trophy: t.Trophy }) => (
 )
 
 const MessageBox = ({ messages }: { messages: Message[] }) => {
-  const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight
+    }
   }
 
   useEffect(() => {
@@ -407,6 +409,7 @@ const MessageBox = ({ messages }: { messages: Message[] }) => {
 
   return (
     <div
+      ref={containerRef}
       style={{
         background: '#eee',
         width: '100%',
@@ -432,7 +435,6 @@ const MessageBox = ({ messages }: { messages: Message[] }) => {
           <div>{msg.message}</div>
         </div>
       ))}
-      <div ref={messagesEndRef} />
     </div>
   )
 }
