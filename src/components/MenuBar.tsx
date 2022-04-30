@@ -205,7 +205,7 @@ export default function MenuBar({
           {gameState.me.name}
         </div>
       )}
-      <div style={{ textAlign: 'center', fontSize: '14px' }}>
+      <div style={{ textAlign: 'center', fontSize: '14px', padding: '0 5px' }}>
         {getCenterElement(gameState, serverPeerId)}
       </div>
       <div
