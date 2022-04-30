@@ -307,7 +307,7 @@ const Board = ({
         margin: '0 auto',
         minWidth: '260px',
         maxWidth: '800px',
-        maxHeight: '80vh',
+        maxHeight: '75vh',
         aspectRatio: '1 / 1',
       }}
     >

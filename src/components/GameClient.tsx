@@ -31,7 +31,6 @@ function Container({ children }: { children: React.ReactNode }) {
         display: 'flex',
         flex: 1,
         flexDirection: 'column',
-        justifyContent: 'space-between',
         alignItems: 'center',
         position: 'relative',
       }}
@@ -296,33 +295,58 @@ export const GameClient = (props: Props) => {
       <div
         style={{
           padding: '0 10px',
-          position: 'relative',
           width: '100%',
-          height: '100%',
+          display: 'flex',
+          flex: 1,
+          flexDirection: 'column',
+          justifyContent: 'space-between',
         }}
       >
-        <BoardComponent
-          gameState={gameState}
-          extraPiece={gameState.pieceBag[0]}
-          players={gameState.players}
-          board={gameState.board}
-          onMove={onMove}
-          onPush={onPush}
-          onClickExtraPiece={onClickExtraPiece}
-          previousPushPosition={gameState.previousPushPosition}
-          lastServerHover={lastServerHover}
-          onPushPositionHover={onPushPositionHover}
-          isMyTurn={isMyTurn()}
-          playerHasPushed={gameState.playerHasPushed}
-          playerInTurn={gameState.players[gameState.playerTurn]}
-        />
-        {adminToken && gameState.stage === 'setup' && (
-          <BoardShuffleIcon onShuffleBoardClick={onShuffleBoardClick} />
-        )}
-      </div>
-
-      <div style={{ padding: '0 15px', width: '100%' }}>
-        <MessageBox messages={messages} />
+        <div
+          style={{
+            position: 'relative',
+            padding: '10px 0',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              width: '100%',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <div
+              style={{ position: 'relative', width: '100%', height: '100%' }}
+            >
+              <BoardComponent
+                gameState={gameState}
+                extraPiece={gameState.pieceBag[0]}
+                players={gameState.players}
+                board={gameState.board}
+                onMove={onMove}
+                onPush={onPush}
+                onClickExtraPiece={onClickExtraPiece}
+                previousPushPosition={gameState.previousPushPosition}
+                lastServerHover={lastServerHover}
+                onPushPositionHover={onPushPositionHover}
+                isMyTurn={isMyTurn()}
+                playerHasPushed={gameState.playerHasPushed}
+                playerInTurn={gameState.players[gameState.playerTurn]}
+              />
+              {adminToken && gameState.stage === 'setup' && (
+                <BoardShuffleIcon onShuffleBoardClick={onShuffleBoardClick} />
+              )}
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: '0 15px', width: '100%', height: '100px' }}>
+          <MessageBox messages={messages} />
+        </div>
       </div>
     </Container>
   )
@@ -415,7 +439,7 @@ const MessageBox = ({ messages }: { messages: Message[] }) => {
         width: '100%',
         padding: '20px 20px',
         fontSize: '12px',
-        height: '80px',
+        height: '100%',
         borderRadius: '5px',
         overflow: 'auto',
       }}
