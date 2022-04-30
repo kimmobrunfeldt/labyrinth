@@ -42,7 +42,7 @@ function getCenterElement(
       const player = gameState.players[gameState.playerTurn]
       const label =
         player.id === gameState.me.id ? (
-          <b>{`${action === 'push' ? '❗️' : '➡️'} Your turn to ${action}`}</b>
+          <b>{`${action === 'push' ? '🟢' : '➡️'} Your turn to ${action}`}</b>
         ) : (
           `${player.name}'s turn to ${action}`
         )
