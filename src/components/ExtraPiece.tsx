@@ -46,19 +46,18 @@ export const ExtraPiece = ({
       <div
         style={{
           position: 'absolute',
-          top: '-1px',
-          left: '-1px',
+          top: '-2px',
+          left: '-2px',
           borderRadius: PIECE_BORDER_RADIUS,
-          width: 'calc(100% + 2px)',
-          height: 'calc(100% + 2px)',
-          border: `2px solid ${
+          width: `${pieceWidth + 4}px`,
+          height: `${pieceWidth + 4}px`,
+          background: `${
             playing && !playerHasPushed ? playerInTurn.color : '#aaa'
           }`,
         }}
       />
       <Piece
         style={{
-          border: `1px solid transparent`,
           transition: 'all 300ms ease',
         }}
         width={pieceWidth}
