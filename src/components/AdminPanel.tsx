@@ -40,6 +40,7 @@ const AdminPanel = ({
           height: '100%',
           position: 'fixed',
           overflow: 'auto',
+          WebkitOverflowScrolling: 'touch',
           zIndex: 1100,
           boxShadow: open ? '5px 5px 15px rgba(133, 126, 119, 0.4)' : undefined,
           borderTop: '6px solid #857E77',

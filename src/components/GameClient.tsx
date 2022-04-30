@@ -278,16 +278,19 @@ export const GameClient = (props: Props) => {
         }
       />
 
-      <MenuBar
-        gameState={gameState}
-        showAdmin={!_.isUndefined(adminToken)}
-        onAddBot={onAddBot}
-        onRemovePlayer={onRemovePlayer}
-        onStartGameClick={onStartGameClick}
-        onRestartGameClick={onRestartGameClick}
-        onSettingsChange={onSettingsChange}
-        serverPeerId={serverPeerId}
-      />
+      <div style={{ flexShrink: 0, width: '100%' }}>
+        <MenuBar
+          gameState={gameState}
+          showAdmin={!_.isUndefined(adminToken)}
+          onAddBot={onAddBot}
+          onRemovePlayer={onRemovePlayer}
+          onStartGameClick={onStartGameClick}
+          onRestartGameClick={onRestartGameClick}
+          onSettingsChange={onSettingsChange}
+          serverPeerId={serverPeerId}
+        />
+      </div>
+
       {gameState.stage !== 'setup' && myNextCard && (
         <CurrentTrophy trophy={myNextCard.trophy} />
       )}
@@ -309,42 +312,50 @@ export const GameClient = (props: Props) => {
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: '100%',
           }}
         >
           <div
             style={{
-              position: 'absolute',
+              position: 'relative',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
               width: '100%',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
             }}
           >
-            <div
-              style={{ position: 'relative', width: '100%', height: '100%' }}
-            >
-              <BoardComponent
-                gameState={gameState}
-                extraPiece={gameState.pieceBag[0]}
-                players={gameState.players}
-                board={gameState.board}
-                onMove={onMove}
-                onPush={onPush}
-                onClickExtraPiece={onClickExtraPiece}
-                previousPushPosition={gameState.previousPushPosition}
-                lastServerHover={lastServerHover}
-                onPushPositionHover={onPushPositionHover}
-                isMyTurn={isMyTurn()}
-                playerHasPushed={gameState.playerHasPushed}
-                playerInTurn={gameState.players[gameState.playerTurn]}
-              />
-              {adminToken && gameState.stage === 'setup' && (
-                <BoardShuffleIcon onShuffleBoardClick={onShuffleBoardClick} />
-              )}
-            </div>
+            <BoardComponent
+              gameState={gameState}
+              extraPiece={gameState.pieceBag[0]}
+              players={gameState.players}
+              board={gameState.board}
+              onMove={onMove}
+              onPush={onPush}
+              onClickExtraPiece={onClickExtraPiece}
+              previousPushPosition={gameState.previousPushPosition}
+              lastServerHover={lastServerHover}
+              onPushPositionHover={onPushPositionHover}
+              isMyTurn={isMyTurn()}
+              playerHasPushed={gameState.playerHasPushed}
+              playerInTurn={gameState.players[gameState.playerTurn]}
+            />
+            {adminToken && gameState.stage === 'setup' && (
+              <BoardShuffleIcon onShuffleBoardClick={onShuffleBoardClick} />
+            )}
           </div>
         </div>
-        <div style={{ padding: '0 15px', width: '100%', height: '100px' }}>
+        <div
+          style={{
+            padding: '0 15px',
+            width: '100%',
+            height: '100px',
+            flexShrink: 0,
+          }}
+        >
           <MessageBox messages={messages} />
         </div>
       </div>
@@ -442,6 +453,7 @@ const MessageBox = ({ messages }: { messages: Message[] }) => {
         height: '100%',
         borderRadius: '5px',
         overflow: 'auto',
+        WebkitOverflowScrolling: 'touch',
       }}
     >
       {messages.map((msg, i) => (

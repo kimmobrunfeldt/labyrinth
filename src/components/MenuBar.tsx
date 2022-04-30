@@ -144,6 +144,7 @@ export default function MenuBar({
   return (
     <div
       style={{
+        flex: 1,
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
