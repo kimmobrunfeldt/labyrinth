@@ -3,7 +3,7 @@
 Online version of the Labyrinth board game. The game server will run
 on the host's browser and networking happens peer-to-peer.
 
-Optimized for Chrome and iOS Safari.
+Optimized for Chrome and iOS Safari. Uses React for the UI. _Clean React code was not the goal.._
 
 ## Get started
 
@@ -22,41 +22,22 @@ See the [reference bot](src/core/bots/example.ts) for all methods. [Random bot](
 
 ## Code architecture
 
-* [Game server](src/core/server.ts): isolated piece which could be ran in dedicated-mode somewhere else. The server is controlled by the admin client via JSON RPC _(transported via PeerJS WebRTC data connection)_ protocol. In practice, the browser which creates the server also runs the admin client.
+* [Game server](src/core/server/server.ts): isolated piece which could be ran in dedicated-mode somewhere else. The server is controlled by the admin client via JSON RPC _(transported via PeerJS WebRTC data connection)_ protocol. In practice, the browser which creates the server also runs the admin client.
 
     Server code is split into:
 
-    * [src/core/board.ts](src/core/board.ts) Game board utility functions.
-    * [src/core/game.ts](src/core/game.ts) Game logic. Synchronous code.
-    * [src/core/server.ts](src/core/server/server.ts) Runs networking and connects it to the core game logic. Asynchronous code.
+    * [src/core/server/board.ts](src/core/server/board.ts) Game board utility functions.
+    * [src/core/server/game.ts](src/core/server/game.ts) Game logic. Synchronous code.
+    * [src/core/server/server.ts](src/core/server/server.ts) Runs networking and connects it to the core game logic. Asynchronous code.
 
 * [Game client](src/core/client.ts): client for the server. Each client equals one player in the server. Bots are also ran on the host's browser. In the worst scenario, the host is running: the server, admin client (Player 1), bot 1, bot 2, and bot 3 clients.
 
 
-## Communication methods
+## Communication and WebRTC
 
-**TBD.**
-
-* Star peers
-* Broadcast via server
-* Client to server
-* Server to client
-* Await / no await
-
-```
-Admin                            Server
-
-Create server ---------------------> launch
-          <--------token------------
-
-Connect client -------------------->
-
-Change settings ------------------>
-```
-
-## Tech stack
-
-* [PeerJS](https://peerjs.com/) for WebRTC data connection abstraction. Handles [signaling](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Signaling_and_video_calling#the_signaling_server) for you.
+* Server is the central controller
+* Server broadcasts state continuously to all clients on state changes
+* [PeerJS](https://peerjs.com/) is used for WebRTC data connection abstraction. Handles [signaling](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Signaling_and_video_calling#the_signaling_server) for you.
 
    Reconnecting was painful. Opted for a quite forceful object [recycle/dispose pattern](src/utils/recycler.ts).
 
@@ -64,7 +45,14 @@ Change settings ------------------>
 
     Mole-RPC is transport agnostic and it was fairly simple to create custom
     [transporters](src/utils/TransportClient.ts) for PeerJS communication.
-* React for the UI. _Clean React code was not the goal.._
+
+* Some messages are multiplexed by the server to all clients. For example the hover position of extra piece is not a server state, but purely a client state.
+
+### Sequence diagram
+
+What happens when the game is created. Some aspects are simplified.
+
+![Sequence diagram](docs/game-sequence.drawio.png)
 
 
 ## Icon credits
