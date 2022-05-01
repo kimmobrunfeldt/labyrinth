@@ -6,7 +6,7 @@ import {
   getPieceAt,
 } from 'src/core/board'
 import { Client, createClient } from 'src/core/client'
-import { GameServer } from 'src/core/server'
+import { GameServer } from 'src/core/server/server'
 import * as t from 'src/gameTypes'
 import { getLogger, loopUntilSuccess } from 'src/utils/utils'
 

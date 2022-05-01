@@ -1,3 +1,34 @@
+import Peer from 'peerjs'
+
+// Server
+
+export type ServerMethods = {
+  start: () => Promise<void>
+  restart: () => Promise<void>
+  getConnectedPlayers: () => Record<string, ServerPlayerWithStatus<'connected'>>
+  sendMessage: (msg: string, opts?: MessageFormatOptions) => Promise<void[]>
+}
+
+export type ServerState = {
+  players: Record<string, ServerPlayer>
+}
+export type ServerPlayer = {
+  client: RpcProxy<ClientRpcAPI>
+  connection: Peer.DataConnection
+  status: InternalPlayerConnectionStatus
+}
+
+export type ServerPlayerWithStatus<T extends InternalPlayerConnectionStatus> =
+  Omit<ServerPlayer, 'status'> & {
+    status: T
+  }
+
+export type InternalPlayerConnectionStatus =
+  | 'connected'
+  | 'disconnected'
+  | 'toBeKicked'
+export type PlayerConnectionStatus = 'connected' | 'disconnected'
+
 // Game control loop
 
 export type PlayerUI = {
@@ -40,13 +71,14 @@ export type ClientGameState = Omit<Game, 'board' | 'cards' | 'players'> & {
   board: Omit<Board, 'pieces'> & {
     pieces: Array<Array<CensoredPieceOnBoard | null>>
   }
-  players: Array<CensoredPlayer & { status: 'connected' | 'disconnected' }>
+  players: Array<CensoredPlayer & { status: PlayerConnectionStatus }>
   me: CensoredPlayer
   myCurrentCards: Card[]
   myPosition?: Position
 }
 
 // Game
+export type ShuffleLevel = 'easy' | 'medium' | 'hard' | 'perfect'
 export type GameSettings = {
   trophyCount: number
   shuffleLevel: ShuffleLevel
@@ -140,7 +172,6 @@ export type NeighborPiece = {
   piece: PieceOnBoard
   direction: Direction
 }
-export type ShuffleLevel = 'easy' | 'medium' | 'hard' | 'perfect'
 
 // Piece
 export type Type = 'straight' | 'corner' | 't-shape'

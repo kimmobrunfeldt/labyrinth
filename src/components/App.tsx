@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import GameClient from 'src/components/GameClient'
 import StartPage from 'src/components/StartPage'
-import { createServer } from 'src/core/server'
+import { createServer } from 'src/core/server/server'
 import { getKey, saveKey } from 'src/sessionStorage'
 import { getRandomPeerId } from 'src/utils/utils'
 import './App.css'

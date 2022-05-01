@@ -24,6 +24,8 @@ export type CreateGameOptions = {
   cardsPerPlayer?: number
 }
 
+export type GameControl = ReturnType<typeof createGame>
+
 export function createGame(opts: CreateGameOptions) {
   const onStateChange = opts.onStateChange ?? (() => undefined)
   const cardsPerPlayer = opts.cardsPerPlayer ?? 5
