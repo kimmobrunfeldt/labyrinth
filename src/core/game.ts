@@ -17,6 +17,7 @@ import * as t from 'src/gameTypes'
 import { format, getLogger } from 'src/utils/utils'
 
 const logger = getLogger('SERVER:')
+const PLAYER_DEFAULT_NAME = 'Player'
 
 export type CreateGameOptions = {
   onStateChange?: (game: t.Game) => void
@@ -113,7 +114,7 @@ export function createGame(opts: CreateGameOptions) {
   const nextTurn = mutator(() => {
     const game = stageGuard(['playing'])
     if (getWinners().length > 0) {
-      // TODO: Allow even out turns
+      // TODO: Allow even out turns?
       finish()
       return
     }
@@ -192,9 +193,7 @@ export function createGame(opts: CreateGameOptions) {
 
   const addPlayer = mutator(
     (player: Pick<t.Player, 'id'> & { name?: string }) => {
-      // Does it make sense for someone to join mid-game?
-      // Why not though..
-      const game = stageGuard(['setup', 'playing'])
+      const game = stageGuard(['setup'])
 
       if (game.players.length >= 4 || gameState.playerColors.length === 0) {
         throw new Error('Server is full')
@@ -203,7 +202,8 @@ export function createGame(opts: CreateGameOptions) {
       const p = player as t.Player
       p.cards = []
       p.color = assertDefined(gameState.playerColors.pop())
-      p.name = player.name ?? `Player ${game.players.length + 1}`
+      p.originalName = player.name ?? PLAYER_DEFAULT_NAME
+      p.name = resolvePlayerName(p.originalName, game.players.length)
       game.players.push(p)
       return p.id
     }
@@ -214,6 +214,7 @@ export function createGame(opts: CreateGameOptions) {
     const player = getPlayerById(id)
     game.players = game.players.filter((p) => p.id !== id)
     game.playerColors.push(player.color)
+    resetPlayerVisibleNames()
   })
 
   // Promotes player as the first player.
@@ -230,11 +231,12 @@ export function createGame(opts: CreateGameOptions) {
     // Add promoted player as the first
     game.players.unshift(promotedPlayer)
 
+    resetPlayerVisibleNames()
+
     // Re-assign colors in the original order
     game.playerColors = createPlayerColors()
-    game.players.forEach((player, index) => {
+    game.players.forEach((player) => {
       player.color = assertDefined(game.playerColors.pop())
-      player.name = `Player ${index + 1}`
     })
   })
 
@@ -324,7 +326,8 @@ export function createGame(opts: CreateGameOptions) {
 
   const setNameByPlayer = mutator((playerId: string, name: string) => {
     const index = playerIndexById(playerId)
-    gameState.players[index].name = name
+    gameState.players[index].originalName = name
+    gameState.players[index].name = resolvePlayerName(name, index)
   })
 
   const maybeUpdateCardFound = mutator((player: t.Player) => {
@@ -365,6 +368,23 @@ export function createGame(opts: CreateGameOptions) {
 
     const newPiece = getPieceAt(game.board, newPos)
     newPiece.players.push(getPlayerById(playerId))
+  }
+
+  function resolvePlayerName(name: string, playerIndex: number): string {
+    const playersWithSameName = gameState.players.filter(
+      (p, index) =>
+        p.originalName.toLowerCase() === name.toLowerCase() &&
+        index < playerIndex
+    )
+
+    return `${name} ${playersWithSameName.length + 1}`
+  }
+
+  function resetPlayerVisibleNames() {
+    const game = stageGuard(['setup'])
+    game.players.forEach((player, index) => {
+      player.name = resolvePlayerName(player.originalName, index)
+    })
   }
 
   function playerIndexById(playerId: string): number {

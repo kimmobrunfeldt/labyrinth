@@ -89,6 +89,7 @@ export type GameByStages<T extends GameStage[]> = {
 export type Player = {
   id: string
   name: string
+  originalName: string
   color: PlayerColor
   cards: Card[]
 }

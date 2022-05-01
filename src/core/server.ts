@@ -314,7 +314,9 @@ export async function createServer(
       if (turnCounterNow !== game.getState().turnCounter) {
         const cardsNow = game.getPlayersCurrentCards(player.id)
         if (currentCardsStart[0].trophy !== cardsNow[0]?.trophy) {
-          sendMessage(`${player.name} found ${currentCardsStart[0].trophy}!`)
+          sendMessage(
+            `🌟 ${player.name} found ${currentCardsStart[0].trophy}! 🌟`
+          )
         }
 
         logger.log('Player', player.name, 'has finished their turn')

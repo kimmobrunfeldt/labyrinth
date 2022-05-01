@@ -28,7 +28,7 @@ export function colorToName(color: t.PlayerColor) {
 }
 
 export function getPlayerLabel(player: t.Player | t.CensoredPlayer): string {
-  return `${player.name} (${colorToName(player.color)})`
+  return `${player.name}`
 }
 
 // TODO: implement turn skip on timeout

@@ -196,6 +196,7 @@ const Board = ({
             })
             containerStyle = {
               ...containerStyle,
+              ...(piece.players.length > 0 ? { zIndex: 900 } : {}),
               ...(!playerHasPushed
                 ? {
                     transform: `translate(${newTransform.x}px, ${newTransform.y}px)`,

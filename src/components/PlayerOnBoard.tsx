@@ -21,11 +21,12 @@ export const PlayerOnBoard = ({
   const playerInTurn = getPlayerInTurn(gameState)
   const cardsFound = _.sumBy(player.censoredCards, (c) => (c.found ? 1 : 0))
   const isPlayerTurn = playerInTurn.id === player.id
+  const cardsFoundLabel = `${cardsFound} / ${player.censoredCards.length}`
 
   return (
     <div
       {...props}
-      title={`${player.name}, ${cardsFound} / ${player.censoredCards.length} found`}
+      title={`${player.name}, ${cardsFoundLabel} found`}
       key={player.id}
       style={{
         zIndex: 900,
@@ -53,16 +54,20 @@ export const PlayerOnBoard = ({
             transform: 'translateX(-50%)',
             fontWeight: 'bold',
             fontSize: '15px',
-            color: player.color,
+            color: isPlayerTurn ? 'white' : player.color,
             textTransform: 'uppercase',
             borderRadius: '20px',
             overflow: 'hidden',
             padding: '1px 5px',
-            background: 'rgba(255, 255, 255, 0.8)',
+            background: isPlayerTurn
+              ? playerInTurn.color
+              : 'rgba(255, 255, 255, 0.8)',
             whiteSpace: 'nowrap',
           }}
         >
-          {gameState.me.id === player.id ? 'You' : player.name}
+          {gameState.me.id === player.id
+            ? `You, ${cardsFoundLabel}`
+            : `${player.name}`}
         </span>
       )}
     </div>
