@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import { createDeck } from 'src/core/pieces'
+import { createDeck } from 'src/core/server/pieces'
 import * as t from 'src/gameTypes'
 
 export class EventEmitter extends EventTarget {

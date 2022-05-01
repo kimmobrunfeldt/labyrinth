@@ -1,18 +1,18 @@
 import _ from 'lodash'
-import * as algo from 'src/core/algorithms'
+import * as algo from 'src/core/server/algorithms'
 import {
   assertDefined,
   getOppositePosition,
   getPieceAt,
   isValidPlayerMove,
   pushWithPiece,
-} from 'src/core/board'
+} from 'src/core/server/board'
 import {
   createDeck as createCardDeck,
   createInitialBoardPieces,
   createPieceBag,
   createPlayerColors,
-} from 'src/core/pieces'
+} from 'src/core/server/pieces'
 import * as t from 'src/gameTypes'
 import { format, getLogger } from 'src/utils/utils'
 

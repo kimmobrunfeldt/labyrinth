@@ -1,6 +1,6 @@
 import _ from 'lodash'
 import { useEffect, useRef } from 'react'
-import { assertDefined, BOARD_PUSH_POSITIONS } from 'src/core/board'
+import { assertDefined, BOARD_PUSH_POSITIONS } from 'src/core/server/board'
 import * as t from 'src/gameTypes'
 import { oppositeIndex } from 'src/utils/utils'
 

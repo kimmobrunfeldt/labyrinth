@@ -1,11 +1,11 @@
 import _ from 'lodash'
+import { Client, createClient } from 'src/core/client'
 import {
   assertDefined,
   BOARD_PUSH_POSITIONS,
   findConnected,
   getPieceAt,
-} from 'src/core/board'
-import { Client, createClient } from 'src/core/client'
+} from 'src/core/server/board'
 import { GameServer } from 'src/core/server/server'
 import * as t from 'src/gameTypes'
 import { getLogger, loopUntilSuccess } from 'src/utils/utils'

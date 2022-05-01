@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import { createPieceBag } from 'src/core/pieces'
+import { createPieceBag } from 'src/core/server/pieces'
 import {
   Board,
   ConnectedPieces,

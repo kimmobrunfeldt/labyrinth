@@ -16,8 +16,11 @@ import {
   randomFreePieceToRotate,
   removePiece,
   removeRandomPiece,
-} from 'src/core/board'
-import { createInitialBoardPieces, createPieceBag } from 'src/core/pieces'
+} from 'src/core/server/board'
+import {
+  createInitialBoardPieces,
+  createPieceBag,
+} from 'src/core/server/pieces'
 import * as t from 'src/gameTypes'
 import {
   ConnectedPieces,

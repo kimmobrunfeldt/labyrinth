@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import { getWeightedRandomPieceIndex } from 'src/core/board'
+import { getWeightedRandomPieceIndex } from 'src/core/server/board'
 import { NonEmptyArray, Piece, Type } from 'src/gameTypes'
 
 describe('getWeightedRandomPieceIndex', () => {

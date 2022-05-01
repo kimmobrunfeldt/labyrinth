@@ -1,8 +1,12 @@
 import MoleClient from 'mole-rpc/MoleClientProxified'
 import MoleServer from 'mole-rpc/MoleServer'
 import Peer from 'peerjs'
-import { assertDefined } from 'src/core/board'
-import { createGame, CreateGameOptions, GameControl } from 'src/core/game'
+import { assertDefined } from 'src/core/server/board'
+import {
+  createGame,
+  CreateGameOptions,
+  GameControl,
+} from 'src/core/server/game'
 import { createServerNetworking } from 'src/core/server/networking'
 import * as t from 'src/gameTypes'
 import { PeerJsTransportClient } from 'src/utils/TransportClient'

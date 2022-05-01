@@ -2,7 +2,7 @@ import _ from 'lodash'
 import React, { useEffect, useState } from 'react'
 import { CSSTransition, TransitionGroup } from 'react-transition-group'
 import AdminPanel, { Props as AdminPanelProps } from 'src/components/AdminPanel'
-import { assertDefined } from 'src/core/board'
+import { assertDefined } from 'src/core/server/board'
 import * as t from 'src/gameTypes'
 import { getKey, saveKey } from 'src/localStorage'
 
