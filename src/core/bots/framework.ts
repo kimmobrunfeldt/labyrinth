@@ -1,7 +1,7 @@
 import { availableBots, BotId } from 'src/core/bots/availableBots'
 import { Client, createClient } from 'src/core/client'
 import * as t from 'src/gameTypes'
-import { getLogger, Logger } from 'src/utils/logger'
+import { getLogger, getUniqueEmoji, Logger } from 'src/utils/logger'
 
 export type BotCreateOptions = {
   logger: Logger
@@ -37,12 +37,14 @@ export async function connectBot(
 
   let gameState: t.ClientGameState
   const turnsReacted = new Set<t.ClientGameState['turnCounter']>()
-  const logger = getLogger(`BOT (${botId}):`)
+  const emoji = getUniqueEmoji()
+  const logger = getLogger(`${emoji} BOT (${botId}):`) // eslint-disable-line no-irregular-whitespace
 
   const client = await createClient({
     playerId,
     playerName: botImplementation.name,
     logger,
+    rpcLogger: getLogger(`${emoji} BOT RPC (${botId}):`), // eslint-disable-line no-irregular-whitespace
     serverPeerId: serverPeerId,
     onJoin: async (state) => {
       logger.log('Joined server')

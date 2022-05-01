@@ -20,7 +20,7 @@ import {
   wrapWithLogging,
 } from 'src/utils/utils'
 
-const logger = getLogger('SERVER:')
+const logger = getLogger('📓 SERVER:')
 
 export const TURN_TIMEOUT_SECONDS = 90
 export const CHECK_TURN_END_INTERVAL_SECONDS = 0.5

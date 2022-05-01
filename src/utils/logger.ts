@@ -8,3 +8,8 @@ export function getLogger(label: string) {
     error: (...args: unknown[]) => console.error(label, ...args),
   }
 }
+
+const colorsAvailable = ['📗', '📘', '📙', '📒']
+export function getUniqueEmoji(): string {
+  return colorsAvailable.shift() ?? '📖'
+}

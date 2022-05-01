@@ -17,7 +17,7 @@ import * as t from 'src/gameTypes'
 import { getLogger } from 'src/utils/logger'
 import { format } from 'src/utils/utils'
 
-const logger = getLogger('SERVER:')
+const logger = getLogger('📓 SERVER:')
 const PLAYER_DEFAULT_NAME = 'Player'
 
 export type CreateGameOptions = {

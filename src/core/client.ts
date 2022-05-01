@@ -6,7 +6,7 @@ import retryify from 'promise-retryify'
 import { SERVER_TOWARDS_CLIENT_TIMEOUT_SECONDS } from 'src/core/server/server'
 import * as t from 'src/gameTypes'
 import { debugLevel, iceServers } from 'src/peerConfig'
-import { getLogger, Logger } from 'src/utils/logger'
+import { getLogger, getUniqueEmoji, Logger } from 'src/utils/logger'
 import { createRecycler, Recycler } from 'src/utils/recycler'
 import { PeerJsTransportClient } from 'src/utils/TransportClient'
 import { PeerJsTransportServer } from 'src/utils/TransportServer'
@@ -26,6 +26,7 @@ export type ClientOptions = {
   onMessage?: t.PromisifyMethods<t.ClientRpcAPI>['onMessage']
   onServerReject?: t.PromisifyMethods<t.ClientRpcAPI>['onServerReject']
   logger: Logger
+  rpcLogger?: Logger
 }
 
 export type Client = Awaited<ReturnType<typeof createClient>>
@@ -47,6 +48,8 @@ export async function createClient(opts: ClientOptions) {
       factory: async () =>
         await _createClient({
           ...opts,
+          rpcLogger:
+            opts.rpcLogger ?? getLogger(`${getUniqueEmoji()} CLIENT RPC:`), // eslint-disable-line no-irregular-whitespace
           onServerReject: async (message) => {
             opts.logger.warn(
               'Server rejected us. Stopping client recycling ...',
@@ -71,7 +74,9 @@ export async function createClient(opts: ClientOptions) {
   return recycler.current
 }
 
-async function _createClient(opts: ClientOptions): Promise<{
+async function _createClient(
+  opts: t.RequiredBy<ClientOptions, 'rpcLogger'>
+): Promise<{
   serverRpc: t.RpcProxy<t.ServerRpcAPI>
   destroy: () => void
   peer: Peer
@@ -115,7 +120,10 @@ async function _createClient(opts: ClientOptions): Promise<{
   }
 }
 
-function createRpc(conn: Peer.DataConnection, opts: ClientOptions) {
+function createRpc(
+  conn: Peer.DataConnection,
+  opts: t.RequiredBy<ClientOptions, 'rpcLogger'>
+) {
   // This client server listens for commands incoming from the server
   const clientServer = new MoleServer({
     transports: [],
@@ -129,8 +137,7 @@ function createRpc(conn: Peer.DataConnection, opts: ClientOptions) {
     onPushPositionHover: opts.onPushPositionHover ?? (async () => undefined),
     onServerReject: opts.onServerReject ?? (async () => undefined),
   }
-  const rpcLogger = getLogger(`CLIENT RPC:`)
-  clientServer.expose(wrapWithLogging(rpcLogger, clientRpcApi))
+  clientServer.expose(wrapWithLogging(opts.rpcLogger, clientRpcApi))
   clientServer.registerTransport(
     new PeerJsTransportServer({ peerConnection: conn })
   )

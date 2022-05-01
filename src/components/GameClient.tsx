@@ -12,7 +12,7 @@ import { createClient } from 'src/core/client'
 import { getNewRotation } from 'src/core/server/board'
 import * as t from 'src/gameTypes'
 import { ClientGameState } from 'src/gameTypes'
-import { getLogger } from 'src/utils/logger'
+import { getLogger, getUniqueEmoji } from 'src/utils/logger'
 import { getKey, saveKey } from 'src/utils/sessionStorage'
 import {
   boardPushPositionToUIPosition,
@@ -72,9 +72,11 @@ export const GameClient = (props: Props) => {
         saveKey('playerId', playerId)
       }
 
+      const logEmoji = getUniqueEmoji()
       const client = await createClient({
         playerId,
-        logger: getLogger(`CLIENT:`),
+        logger: getLogger(`${logEmoji} CLIENT:`), // eslint-disable-line no-irregular-whitespace
+        rpcLogger: getLogger(`${logEmoji} CLIENT RPC:`), // eslint-disable-line no-irregular-whitespace
         serverPeerId,
         onJoin: async (state) => {
           setGameState(state)

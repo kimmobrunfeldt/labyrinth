@@ -229,6 +229,11 @@ export function isNonEmptyArray<T>(arr: T[]): arr is NonEmptyArray<T> {
   return arr.length > 0
 }
 
+export type RequiredBy<
+  T extends { [key: string]: unknown },
+  K extends keyof T
+> = Omit<T, K> & Pick<Required<T>, K>
+
 export type RpcProxy<T extends { [key: string]: (...args: any[]) => any }> =
   PromisifyMethods<T> & { notify: PromisifyMethods<T> }
 
