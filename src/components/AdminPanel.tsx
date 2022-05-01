@@ -3,7 +3,7 @@ import { Button } from 'src/components/Button'
 import { FormLabel } from 'src/components/FormLabel'
 import { CrossIcon } from 'src/components/Icons'
 import { Select } from 'src/components/Select'
-import { BotId } from 'src/core/bots/availableBots'
+import { availableBots, BotId } from 'src/core/bots/availableBots'
 import * as t from 'src/gameTypes'
 import { useOnKeyDown } from 'src/utils/useOnKeyDown'
 import { zIndices } from 'src/zIndices'
@@ -186,7 +186,11 @@ const AdminPanel = ({
                       placeholder="Add bot"
                       value={''}
                       onChange={(value) => onAddBot(value as BotId)}
-                      options={[{ value: 'random', label: 'Random bot' }]}
+                      options={Object.keys(availableBots).map((key) => ({
+                        value: key,
+                        label:
+                          availableBots[key as keyof typeof availableBots].name,
+                      }))}
                     />
                   </FormItem>
                 )}

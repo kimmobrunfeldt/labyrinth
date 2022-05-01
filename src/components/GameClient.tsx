@@ -7,18 +7,19 @@ import MenuBar from 'src/components/MenuBar'
 import { createMessage, Message, MessageBox } from 'src/components/MessagesBox'
 import { NextTrophy } from 'src/components/NextTrophy'
 import { BotId } from 'src/core/bots/availableBots'
-import { connectBot } from 'src/core/bots/random'
+import { connectBot } from 'src/core/bots/framework'
 import { createClient } from 'src/core/client'
 import { getNewRotation } from 'src/core/server/board'
 import * as t from 'src/gameTypes'
 import { ClientGameState } from 'src/gameTypes'
+import { getLogger } from 'src/utils/logger'
 import { getKey, saveKey } from 'src/utils/sessionStorage'
 import {
   boardPushPositionToUIPosition,
   UIPushPosition,
   uiPushPositionToBoard,
 } from 'src/utils/uiUtils'
-import { getLogger, uuid } from 'src/utils/utils'
+import { uuid } from 'src/utils/utils'
 import { zIndices } from 'src/zIndices'
 
 type Props = {
@@ -79,7 +80,7 @@ export const GameClient = (props: Props) => {
           setGameState(state)
 
           if (adminToken) {
-            await client.client.promote(adminToken)
+            await client.serverRpc.promote(adminToken)
           }
         },
         onPeerError: (err) => {
@@ -136,16 +137,8 @@ export const GameClient = (props: Props) => {
     return gameState.playerTurn === myIndex
   }
 
-  async function onAddBot(name: BotId) {
-    switch (name) {
-      case 'random': {
-        return await connectBot(`bot-${uuid()}`, {
-          peerId: serverPeerId,
-        })
-      }
-      default:
-        t.assertExhaustive(name)
-    }
+  async function onAddBot(botId: BotId) {
+    await connectBot(botId, `bot-${uuid()}`, serverPeerId)
   }
 
   async function onRemovePlayer(id: t.Player['id']) {
@@ -153,14 +146,14 @@ export const GameClient = (props: Props) => {
       return
     }
 
-    await client.client.notify.removePlayer(adminToken, id)
+    await client.serverRpc.notify.removePlayer(adminToken, id)
   }
 
   async function onSettingsChange(settings: Partial<t.GameSettings>) {
     if (!client || !adminToken) {
       return
     }
-    await client.client.changeSettings(adminToken, settings)
+    await client.serverRpc.changeSettings(adminToken, settings)
   }
 
   async function onMove(piece: t.CensoredPieceOnBoard) {
@@ -168,7 +161,7 @@ export const GameClient = (props: Props) => {
       return
     }
 
-    await client.client.move(piece.position)
+    await client.serverRpc.move(piece.position)
   }
 
   async function onPush(pushPos: t.PushPosition) {
@@ -176,7 +169,7 @@ export const GameClient = (props: Props) => {
       return
     }
 
-    await client.client.push(pushPos)
+    await client.serverRpc.push(pushPos)
   }
 
   function onClickExtraPiece() {
@@ -184,7 +177,7 @@ export const GameClient = (props: Props) => {
       return
     }
 
-    client.client.setExtraPieceRotation(
+    client.serverRpc.setExtraPieceRotation(
       getNewRotation(gameState.pieceBag[0].rotation, 90)
     )
   }
@@ -204,14 +197,14 @@ export const GameClient = (props: Props) => {
 
     const boardPos = hoverPos ? uiPushPositionToBoard(hoverPos) : undefined
     // Don't wait for finish
-    void client.client.setPushPositionHover(boardPos)
+    void client.serverRpc.setPushPositionHover(boardPos)
   }
 
   async function onStartGameClick() {
     if (!client || !adminToken) {
       return
     }
-    await client.client.start(adminToken)
+    await client.serverRpc.start(adminToken)
   }
 
   async function onRestartGameClick() {
@@ -229,14 +222,14 @@ export const GameClient = (props: Props) => {
       }
     }
 
-    await client.client.restart(adminToken)
+    await client.serverRpc.restart(adminToken)
   }
 
   async function onShuffleBoardClick() {
     if (!client || !adminToken) {
       return
     }
-    await client.client.shuffleBoard(adminToken)
+    await client.serverRpc.shuffleBoard(adminToken)
   }
 
   const containerProps = {

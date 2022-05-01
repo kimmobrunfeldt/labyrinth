@@ -14,7 +14,8 @@ import {
   createPlayerColors,
 } from 'src/core/server/pieces'
 import * as t from 'src/gameTypes'
-import { format, getLogger } from 'src/utils/utils'
+import { getLogger } from 'src/utils/logger'
+import { format } from 'src/utils/utils'
 
 const logger = getLogger('SERVER:')
 const PLAYER_DEFAULT_NAME = 'Player'
@@ -247,6 +248,10 @@ export function createGame(opts: CreateGameOptions) {
 
     if (!isPlayersTurn(playerId)) {
       throw new Error(`It's not ${playerId}'s turn`)
+    }
+
+    if (game.playerHasPushed) {
+      throw new Error(`Player ${playerId} already pushed`)
     }
 
     if (game.previousPushPosition) {

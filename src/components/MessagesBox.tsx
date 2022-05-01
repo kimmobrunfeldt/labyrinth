@@ -53,6 +53,7 @@ export const MessageBox = ({ messages }: { messages: Message[] }) => {
             alignItems: 'flex-start',
             fontFamily: 'monospace',
             fontWeight: msg.options?.bold ? 'bold' : 'normal',
+            lineHeight: 1.1,
           }}
         >
           <div style={{ marginRight: '10px' }}>

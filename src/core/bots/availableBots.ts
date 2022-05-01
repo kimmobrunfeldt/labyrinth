@@ -1,10 +1,10 @@
-import { connectBot as connectRandomBot } from 'src/core/bots/random'
+import * as random from 'src/core/bots/random'
 
 /**
  * Add newly created bots here
  */
 export const availableBots = {
-  random: connectRandomBot,
+  random,
 }
 
 export type BotId = keyof typeof availableBots

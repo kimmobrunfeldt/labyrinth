@@ -6,15 +6,11 @@ import retryify from 'promise-retryify'
 import { SERVER_TOWARDS_CLIENT_TIMEOUT_SECONDS } from 'src/core/server/server'
 import * as t from 'src/gameTypes'
 import { debugLevel, iceServers } from 'src/peerConfig'
+import { getLogger, Logger } from 'src/utils/logger'
 import { createRecycler, Recycler } from 'src/utils/recycler'
 import { PeerJsTransportClient } from 'src/utils/TransportClient'
 import { PeerJsTransportServer } from 'src/utils/TransportServer'
-import {
-  getLogger,
-  Logger,
-  waitForEvent,
-  wrapWithLogging,
-} from 'src/utils/utils'
+import { waitForEvent, wrapWithLogging } from 'src/utils/utils'
 
 export type ClientOptions = {
   playerId: string
@@ -76,7 +72,7 @@ export async function createClient(opts: ClientOptions) {
 }
 
 async function _createClient(opts: ClientOptions): Promise<{
-  client: t.RpcProxy<t.ServerRpcAPI>
+  serverRpc: t.RpcProxy<t.ServerRpcAPI>
   destroy: () => void
   peer: Peer
   connection: Peer.DataConnection
@@ -110,7 +106,7 @@ async function _createClient(opts: ClientOptions): Promise<{
   })
 
   return {
-    client: createRpc(connection, opts),
+    serverRpc: createRpc(connection, opts),
     destroy: () => {
       peer.destroy()
     },

@@ -1,6 +1,7 @@
 import _ from 'lodash'
 import { createDeck } from 'src/core/server/pieces'
 import * as t from 'src/gameTypes'
+import { Logger } from './logger'
 
 export class EventEmitter extends EventTarget {
   dispatch(eventType: string, meta: Record<string, unknown> = {}) {
@@ -188,15 +189,4 @@ export function createMutableProxy<T>(target: T): MutableProxy<T> {
 
 export function oppositeIndex(arrayLength: number, index: number): number {
   return arrayLength - index - 1
-}
-
-export type Logger = ReturnType<typeof getLogger>
-export function getLogger(label: string) {
-  return {
-    debug: (...args: unknown[]) => console.debug(label, ...args),
-    info: (...args: unknown[]) => console.info(label, ...args),
-    log: (...args: unknown[]) => console.log(label, ...args),
-    warn: (...args: unknown[]) => console.warn(label, ...args),
-    error: (...args: unknown[]) => console.error(label, ...args),
-  }
 }

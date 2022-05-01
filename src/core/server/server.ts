@@ -9,10 +9,10 @@ import {
 } from 'src/core/server/game'
 import { createServerNetworking } from 'src/core/server/networking'
 import * as t from 'src/gameTypes'
+import { getLogger } from 'src/utils/logger'
 import { PeerJsTransportClient } from 'src/utils/TransportClient'
 import { PeerJsTransportServer } from 'src/utils/TransportServer'
 import {
-  getLogger,
   getPlayerLabel,
   getRandomAdminToken,
   sleep,

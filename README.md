@@ -5,7 +5,22 @@ on the host's browser and networking happens peer-to-peer.
 
 Optimized for Chrome and iOS Safari.
 
-### Code architecture
+## Get started
+
+* `npm i`
+* `npm start`
+* Open http://localhost:4000 and click "Host game"
+
+## Developing a bot
+
+See the [reference bot](src/core/bots/example.ts) for all methods. [Random bot](src/core/bots/random.ts) is a minimal example of a working bot that moves randomly.
+
+1. `cp src/core/bots/example.ts cp src/core/bots/new.ts`
+1. Include the new bot in [src/core/bots/availableBots.ts](src/core/bots/availableBots.ts)
+1. Set bot's name with `export const name ...`
+1. Implement `onMyTurn` at minimum
+
+## Code architecture
 
 * [Game server](src/core/server.ts): isolated piece which could be ran in dedicated-mode somewhere else. The server is controlled by the admin client via JSON RPC _(transported via PeerJS WebRTC data connection)_ protocol. In practice, the browser which creates the server also runs the admin client.
 
@@ -18,7 +33,7 @@ Optimized for Chrome and iOS Safari.
 * [Game client](src/core/client.ts): client for the server. Each client equals one player in the server. Bots are also ran on the host's browser. In the worst scenario, the host is running: the server, admin client (Player 1), bot 1, bot 2, and bot 3 clients.
 
 
-### Communication methods
+## Communication methods
 
 **TBD.**
 
@@ -39,7 +54,7 @@ Connect client -------------------->
 Change settings ------------------>
 ```
 
-### Tech stack
+## Tech stack
 
 * [PeerJS](https://peerjs.com/) for WebRTC data connection abstraction. Handles [signaling](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Signaling_and_video_calling#the_signaling_server) for you.
 

@@ -29,7 +29,7 @@ import {
   Piece,
   PieceOnBoard,
 } from 'src/gameTypes'
-import { Logger } from 'src/utils/utils'
+import { Logger } from 'src/utils/logger'
 
 export function random({ logger }: { logger: Logger }) {
   while (true) {

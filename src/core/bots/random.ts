@@ -1,76 +1,69 @@
 import _ from 'lodash'
-import { Client, createClient } from 'src/core/client'
+import { BotCreateOptions, BotImplementation } from 'src/core/bots/framework'
+import { Client } from 'src/core/client'
 import {
   assertDefined,
   BOARD_PUSH_POSITIONS,
   findConnected,
   getPieceAt,
 } from 'src/core/server/board'
-import { GameServer } from 'src/core/server/server'
 import * as t from 'src/gameTypes'
-import { getLogger, loopUntilSuccess } from 'src/utils/utils'
+import { loopUntilSuccess } from 'src/utils/utils'
 
-const logger = getLogger(`BOT (RANDOM):`)
+export const name = 'Random bot'
 
-export async function connectBot(
-  playerId: string,
-  server: Pick<GameServer, 'peerId'>
-) {
-  let gameState: t.ClientGameState
+/**
+ * Warning! You must use `client` as is, because it's a Proxy object for
+ * reconnect purposes. Don't take any properties out of it, it will break.
+ *
+ * Do not:
+ *
+ *   // Bad
+ *   const { serverRpc } = client
+ *
+ *   // Bad
+ *   const getMyPosition = client.serverRpc.getMyPosition()
+ *
+ * Whatever you need to access within client, always use the full property path:
+ *
+ *   client.serverRpc.getMyPosition()
+ *
+ * @returns Promise so that the bot creation can do something async if needed.
+ */
+export async function create({
+  logger,
+  client,
+}: BotCreateOptions): Promise<BotImplementation> {
+  return {
+    async onMyTurn(getState) {
+      await new Promise((resolve) => setTimeout(resolve, 2000)) // "thinking time"
 
-  const turnsReacted = new Set<number>()
-  const client = await createClient({
-    playerId,
-    playerName: 'Bot',
-    logger,
-    serverPeerId: server.peerId,
-    onJoin: async (state) => {
-      logger.log('Joined server')
-      gameState = state
-    },
-    onStateChange: async (state) => {
-      gameState = state
-
-      if (gameState.stage !== 'playing') {
-        return
-      }
-
-      const playerInTurn = state.players[state.playerTurn]
-      if (
-        turnsReacted.has(gameState.turnCounter) ||
-        playerInTurn.id !== state.me.id
-      ) {
-        return
-      }
-
-      turnsReacted.add(gameState.turnCounter)
-
-      // Loop until success, because the bot doesn't know all rules
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const state = getState()
+      // Loop until success, because the bot doesn't understand the blocked push
+      // position rule
       await loopUntilSuccess(
         async () => {
-          await push(gameState, client)
+          await push(state, client)
         },
         { maxTries: 5, onError: (err) => logger.error('Unable to push', err) }
       )
 
-      await new Promise((resolve) => setTimeout(resolve, 3000))
-      await loopUntilSuccess(
-        async () => {
-          await move(gameState, client)
-        },
-        { maxTries: 5, onError: (err) => logger.error('Unable to move', err) }
-      )
+      const stateAfterPush = getState()
+      // Do a move
+      await new Promise((resolve) => setTimeout(resolve, 3000)) // "thinking time"
+      await move(stateAfterPush, client)
     },
-  })
-
-  return client
+  }
 }
 
 async function push(_gameState: t.ClientGameState, client: Client) {
-  // Push
+  // Turn the extra piece randomly
+  await client.serverRpc.setExtraPieceRotation(
+    assertDefined(_.sample<t.Rotation>([0, 90, 180, 270]))
+  )
+
   const pushPos = assertDefined(_.sample(BOARD_PUSH_POSITIONS))
-  await client.client.push(pushPos)
+  await client.serverRpc.push(pushPos)
 }
 
 async function move(gameState: t.ClientGameState, client: Client) {
@@ -95,5 +88,5 @@ async function move(gameState: t.ClientGameState, client: Client) {
     connected.find(
       (p) => p.position.x !== currentPos.x && p.position.y !== currentPos.y
     )?.position ?? currentPos
-  await client.client.move(newPos)
+  await client.serverRpc.move(newPos)
 }

@@ -1,7 +1,8 @@
 import Peer from 'peerjs'
 import { debugLevel, iceServers } from 'src/peerConfig'
+import { Logger } from 'src/utils/logger'
 import { createRecycler } from 'src/utils/recycler'
-import { Logger, waitForEvent } from 'src/utils/utils'
+import { waitForEvent } from 'src/utils/utils'
 
 export type CreateServerNetworkingOptions = {
   logger: Logger
