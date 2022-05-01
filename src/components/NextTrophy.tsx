@@ -1,4 +1,5 @@
 import React from 'react'
+import { MENU_BAR_HEIGHT } from 'src/components/MenuBar'
 import * as t from 'src/gameTypes'
 
 // The icons were flipped upside down in Figma because they are locked always
@@ -12,7 +13,7 @@ export const NextTrophy = ({ trophy }: { trophy: t.Trophy }) => (
       display: 'flex',
       flexDirection: 'column',
       position: 'absolute',
-      top: '68px',
+      top: `${MENU_BAR_HEIGHT + 8}px`,
       right: '0',
       textAlign: 'center',
     }}

@@ -6,12 +6,14 @@ import { RotateIcon } from 'src/components/Icons'
 import MenuBar from 'src/components/MenuBar'
 import { createMessage, Message, MessageBox } from 'src/components/MessagesBox'
 import { NextTrophy } from 'src/components/NextTrophy'
+import { VisibilityToggle } from 'src/components/VisibilityToggle'
 import { BotId } from 'src/core/bots/availableBots'
 import { connectBot } from 'src/core/bots/framework'
 import { createClient } from 'src/core/client'
 import { getNewRotation } from 'src/core/server/board'
 import * as t from 'src/gameTypes'
 import { ClientGameState } from 'src/gameTypes'
+import * as localStorage from 'src/utils/localStorage'
 import { getLogger, getUniqueEmoji } from 'src/utils/logger'
 import { getKey, saveKey } from 'src/utils/sessionStorage'
 import {
@@ -46,7 +48,6 @@ function Container({ children }: { children: React.ReactNode }) {
 
 export const GameClient = (props: Props) => {
   const { serverPeerId, adminToken } = props
-
   const [error, setError] = useState<Error | undefined>(undefined)
   const [client, setClient] = useState<
     Awaited<ReturnType<typeof createClient>> | undefined
@@ -61,6 +62,9 @@ export const GameClient = (props: Props) => {
     adminToken
       ? [createMessage('You are the host. Game server runs on your browser.')]
       : []
+  )
+  const [playerLabelsVisible, setPlayerLabelsVisible] = useState(
+    localStorage.getKey('playerLabelsHidden') !== 'true'
   )
 
   useEffect(() => {
@@ -126,6 +130,13 @@ export const GameClient = (props: Props) => {
   function onMessage(msg: string, opts?: t.MessageFormatOptions) {
     setMessages((msgs) => [...msgs, createMessage(msg, opts)])
   }
+
+  useEffect(() => {
+    localStorage.saveKey(
+      'playerLabelsHidden',
+      playerLabelsVisible ? 'false' : 'true'
+    )
+  }, [playerLabelsVisible])
 
   function isMyTurn() {
     if (!gameState) {
@@ -335,6 +346,7 @@ export const GameClient = (props: Props) => {
               isMyTurn={isMyTurn()}
               playerHasPushed={gameState.playerHasPushed}
               playerInTurn={gameState.players[gameState.playerTurn]}
+              playerLabelsVisible={playerLabelsVisible}
             />
             {adminToken && gameState.stage === 'setup' && (
               <BoardShuffleIcon onShuffleBoardClick={onShuffleBoardClick} />
@@ -352,6 +364,16 @@ export const GameClient = (props: Props) => {
           <MessageBox messages={messages} />
         </div>
       </div>
+
+      {gameState.stage !== 'setup' && (
+        <VisibilityToggle
+          visible={playerLabelsVisible}
+          onToggle={() => {
+            console.log('set')
+            setPlayerLabelsVisible(!playerLabelsVisible)
+          }}
+        />
+      )}
     </Container>
   )
 }

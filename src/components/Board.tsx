@@ -40,6 +40,7 @@ export type Props = {
   isMyTurn: boolean
   playerInTurn: t.CensoredPlayer
   playerHasPushed: boolean
+  playerLabelsVisible: boolean
 }
 
 type PieceToRender =
@@ -63,6 +64,7 @@ const Board = ({
   extraPiece,
   onPushPositionHover,
   lastServerHover,
+  playerLabelsVisible,
 }: Props) => {
   const [lastLocalHover, setLastLocalHover] = useState<
     UIPushPosition | undefined
@@ -232,6 +234,7 @@ const Board = ({
                   pieceWidth={pieceWidth}
                   piece={piece}
                   gameState={gameState}
+                  playerLabelsVisible={playerLabelsVisible}
                   onClick={() => {
                     if (playerHasPushed) {
                       onMove(piece)

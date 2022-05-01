@@ -1,5 +1,6 @@
 export type Storage = {
   adminPanelOpen: 'true' | 'false'
+  playerLabelsHidden: 'true' | 'false'
 }
 
 function isSupported() {

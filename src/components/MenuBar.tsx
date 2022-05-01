@@ -6,6 +6,8 @@ import { assertDefined } from 'src/core/server/board'
 import * as t from 'src/gameTypes'
 import { getKey, saveKey } from 'src/utils/localStorage'
 
+export const MENU_BAR_HEIGHT = 60
+
 export type Props = {
   showAdmin: boolean
   serverPeerId: string
@@ -146,7 +148,7 @@ export default function MenuBar({
         justifyContent: 'space-between',
         alignItems: 'center',
         width: '100%',
-        height: '60px',
+        height: `${MENU_BAR_HEIGHT}px`,
         // background: '#fafafa',
       }}
     >

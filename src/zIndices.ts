@@ -4,4 +4,5 @@ export const zIndices = {
   boardShuffleIcon: 1000,
   pieceWhenPlayerOnIt: 900,
   playerOnBoard: 900,
+  hideLabelsLink: 500,
 }

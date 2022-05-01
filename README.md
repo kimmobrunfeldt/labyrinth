@@ -96,3 +96,5 @@ UI
 * Player by nico bayu saputro from NounProject.com
 * Replay by Cuputo from NounProject.com
 * Cross by Joni Ramadhan from NounProject.com
+* Visible by Bluetip Design from NounProject.com
+* Invisible by Bluetip Design from NounProject.com

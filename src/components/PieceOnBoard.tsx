@@ -8,6 +8,7 @@ export type Props = JSX.IntrinsicElements['div'] & {
   style?: React.CSSProperties
   pieceWidth: number
   gameState: t.ClientGameState
+  playerLabelsVisible: boolean
 }
 
 export const PieceOnBoard = ({
@@ -18,6 +19,7 @@ export const PieceOnBoard = ({
   style = {},
   pieceWidth,
   gameState,
+  playerLabelsVisible,
 }: Props) => {
   return (
     <div
@@ -58,7 +60,7 @@ export const PieceOnBoard = ({
               }}
             >
               <PlayerOnBoard
-                showName={index === 0}
+                showName={index === 0 && playerLabelsVisible}
                 gameState={gameState}
                 player={player}
                 piece={piece}
