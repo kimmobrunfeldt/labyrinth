@@ -1,9 +1,11 @@
 import _ from 'lodash'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import BoardComponent from 'src/components/Board'
 import ConfirmLeave from 'src/components/ConfirmLeave'
 import { RotateIcon } from 'src/components/Icons'
 import MenuBar from 'src/components/MenuBar'
+import { createMessage, Message, MessageBox } from 'src/components/MessagesBox'
+import { NextTrophy } from 'src/components/NextTrophy'
 import { getNewRotation } from 'src/core/board'
 import { connectBot } from 'src/core/bots/random'
 import { createClient } from 'src/core/client'
@@ -16,7 +18,6 @@ import {
   uiPushPositionToBoard,
 } from 'src/utils/uiUtils'
 import { getLogger, uuid } from 'src/utils/utils'
-import './App.css'
 
 type Props = {
   serverPeerId: string
@@ -38,15 +39,6 @@ function Container({ children }: { children: React.ReactNode }) {
       {children}
     </div>
   )
-}
-
-type Message = { time: Date; message: string; options?: t.MessageFormatOptions }
-function createMessage(msg: string, opts?: t.MessageFormatOptions): Message {
-  return {
-    time: new Date(),
-    message: msg,
-    options: opts,
-  }
 }
 
 export const GameClient = (props: Props) => {
@@ -293,7 +285,7 @@ export const GameClient = (props: Props) => {
       </div>
 
       {gameState.stage !== 'setup' && myNextCard && (
-        <CurrentTrophy trophy={myNextCard.trophy} />
+        <NextTrophy trophy={myNextCard.trophy} />
       )}
 
       <div
@@ -304,6 +296,7 @@ export const GameClient = (props: Props) => {
           flex: 1,
           flexDirection: 'column',
           justifyContent: 'space-between',
+          userSelect: 'none',
         }}
       >
         <div
@@ -403,78 +396,5 @@ const BoardShuffleIcon = ({
     </div>
   </div>
 )
-
-const UPWARDS_TROPHIES = ['Candles', 'KnightHelmet']
-const CurrentTrophy = ({ trophy }: { trophy: t.Trophy }) => (
-  <div
-    style={{
-      display: 'flex',
-      flexDirection: 'column',
-      position: 'absolute',
-      top: '68px',
-      right: '0',
-      textAlign: 'center',
-    }}
-  >
-    <div style={{ fontWeight: 'bold', color: '#555' }}>NEXT</div>
-    <img
-      style={{
-        position: 'relative',
-        top: '-15px',
-        width: '70px',
-        transform: `rotate(${UPWARDS_TROPHIES.includes(trophy) ? 180 : 0}deg)`,
-      }}
-      src={`${process.env.PUBLIC_URL}/pieces/${trophy}.svg`}
-      alt={trophy}
-    />
-  </div>
-)
-
-const MessageBox = ({ messages }: { messages: Message[] }) => {
-  const containerRef = useRef<HTMLDivElement | null>(null)
-
-  const scrollToBottom = () => {
-    if (containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight
-    }
-  }
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
-
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        background: '#eee',
-        width: '100%',
-        padding: '20px 20px',
-        fontSize: '12px',
-        height: '100%',
-        borderRadius: '5px',
-        overflow: 'auto',
-        WebkitOverflowScrolling: 'touch',
-      }}
-    >
-      {messages.map((msg, i) => (
-        <div
-          key={i}
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            fontFamily: 'monospace',
-            fontWeight: msg.options?.bold ? 'bold' : 'normal',
-          }}
-        >
-          <div style={{ marginRight: '10px' }}>
-            {msg.time.toLocaleTimeString()}
-          </div>
-          <div>{msg.message}</div>
-        </div>
-      ))}
-    </div>
-  )
-}
 
 export default GameClient

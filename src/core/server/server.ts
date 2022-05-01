@@ -3,9 +3,8 @@ import MoleServer from 'mole-rpc/MoleServer'
 import Peer from 'peerjs'
 import { assertDefined } from 'src/core/board'
 import { createGame, CreateGameOptions, GameControl } from 'src/core/game'
+import { createServerNetworking } from 'src/core/server/networking'
 import * as t from 'src/gameTypes'
-import { debugLevel, iceServers } from 'src/peerConfig'
-import { createRecycler } from 'src/utils/recycler'
 import { PeerJsTransportClient } from 'src/utils/TransportClient'
 import { PeerJsTransportServer } from 'src/utils/TransportServer'
 import {
@@ -13,7 +12,6 @@ import {
   getPlayerLabel,
   getRandomAdminToken,
   sleep,
-  waitForEvent,
   wrapAdminMethods,
   wrapWithLogging,
 } from 'src/utils/utils'
@@ -43,6 +41,7 @@ export async function createServer(
   const adminToken = getRandomAdminToken()
 
   const network = await createServerNetworking({
+    logger,
     peerId,
     onClientConnect: async (playerId, connection, playerName) => {
       logger.log(`Player '${playerName ?? playerId}' connected`)
@@ -413,71 +412,5 @@ function getStateForPlayer(
       game.getState().stage === 'setup'
         ? undefined
         : game.getPlayerPosition(playerId),
-  }
-}
-
-export type CreateServerNetworkingOptions = {
-  peerId?: string
-  onClientConnect: (
-    id: string,
-    connection: Peer.DataConnection,
-    name?: string
-  ) => void
-  onClientDisconnect: (id: string, connection: Peer.DataConnection) => void
-}
-
-async function createServerNetworking(opts: CreateServerNetworkingOptions) {
-  const recycler = await createRecycler({
-    logger,
-    factory: async () => await _createServerNetworking(opts),
-    destroyer: async (current) => current.destroy(),
-    autoRecycle: (newCurrent, cb) => {
-      newCurrent.peer.on('disconnected', cb)
-      newCurrent.peer.on('error', cb)
-    },
-  })
-
-  return recycler.current
-}
-
-async function _createServerNetworking(
-  opts: CreateServerNetworkingOptions
-): Promise<{
-  destroy: () => void
-  peer: Peer
-  peerId: string
-}> {
-  const peer = new Peer(opts.peerId, {
-    debug: debugLevel,
-    config: {
-      iceServers,
-    },
-  })
-  peer.on('error', (err) => logger.error(err))
-  peer.on('open', (openPeerId) => {
-    logger.log('Server open with peer id', openPeerId)
-
-    peer.on('connection', (conn) => {
-      const playerId = conn.metadata.id
-      const playerName = conn.metadata.name
-
-      conn.on('open', async () => {
-        opts.onClientConnect(playerId, conn, playerName)
-      })
-      conn.on('close', () => {
-        opts.onClientDisconnect(playerId, conn)
-      })
-    })
-  })
-
-  const [openedPeerId] = (await waitForEvent(peer, 'open')) as [string]
-  if (!openedPeerId) {
-    throw new Error('Unexpected undefined for openedPeerId')
-  }
-
-  return {
-    destroy: () => peer.destroy(),
-    peer,
-    peerId: openedPeerId,
   }
 }
