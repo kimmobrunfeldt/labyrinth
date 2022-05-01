@@ -3,14 +3,16 @@ import { Button } from 'src/components/Button'
 import { FormLabel } from 'src/components/FormLabel'
 import { CrossIcon } from 'src/components/Icons'
 import { Select } from 'src/components/Select'
+import { BotId } from 'src/core/bots/availableBots'
 import * as t from 'src/gameTypes'
 import { useOnKeyDown } from 'src/useOnKeyDown'
+import { zIndices } from 'src/zIndices'
 
 export type Props = {
   open: boolean
   onStartGameClick: () => void
   onRestartGameClick: () => void
-  onAddBot: (name: t.BotName) => void
+  onAddBot: (name: BotId) => void
   onRemovePlayer: (id: t.Player['id']) => void
   onSettingsChange: (settings: Partial<t.GameSettings>) => void
   gameState: t.ClientGameState
@@ -41,7 +43,7 @@ const AdminPanel = ({
           position: 'fixed',
           overflow: 'auto',
           WebkitOverflowScrolling: 'touch',
-          zIndex: 1100,
+          zIndex: zIndices.adminPanel,
           boxShadow: open ? '5px 5px 15px rgba(133, 126, 119, 0.4)' : undefined,
           borderTop: '6px solid #857E77',
           background: 'white',
@@ -57,17 +59,13 @@ const AdminPanel = ({
             position: 'absolute',
             top: '7px',
             right: '5px',
-            zIndex: 90,
             transition: 'all 400ms ease',
             padding: '8px 14px',
             cursor: 'pointer',
           }}
           onClick={onCloseClick}
         >
-          <CrossIcon
-            fill="#857E77"
-            style={{ fontSize: open ? '24px' : '30px' }}
-          />
+          <CrossIcon fill="#857E77" style={{ fontSize: '24px' }} />
         </div>
         <div style={{ padding: '18px 20px', height: '100%' }}>
           <div
@@ -187,7 +185,7 @@ const AdminPanel = ({
                     <Select
                       placeholder="Add bot"
                       value={''}
-                      onChange={(value) => onAddBot(value as t.BotName)}
+                      onChange={(value) => onAddBot(value as BotId)}
                       options={[{ value: 'random', label: 'Random bot' }]}
                     />
                   </FormItem>

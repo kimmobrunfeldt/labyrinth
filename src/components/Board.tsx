@@ -22,6 +22,7 @@ import {
   UIPushPosition,
   UI_PUSH_POSITIONS,
 } from 'src/utils/uiUtils'
+import { zIndices } from 'src/zIndices'
 
 export type Props = {
   gameState: t.ClientGameState
@@ -196,7 +197,9 @@ const Board = ({
             })
             containerStyle = {
               ...containerStyle,
-              ...(piece.players.length > 0 ? { zIndex: 900 } : {}),
+              ...(piece.players.length > 0
+                ? { zIndex: zIndices.pieceWhenPlayerOnIt }
+                : {}),
               ...(!playerHasPushed
                 ? {
                     transform: `translate(${newTransform.x}px, ${newTransform.y}px)`,
@@ -380,7 +383,7 @@ function getExtraPieceContent({
       }px, ${
         PIECE_MARGIN_PX + resolvedPosition.y * (pieceWidth + PIECE_MARGIN_PX)
       }px)`,
-      zIndex: 1000,
+      zIndex: zIndices.extraPiece,
     } as React.CSSProperties,
     content: (
       <ExtraPiece

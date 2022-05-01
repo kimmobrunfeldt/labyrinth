@@ -128,7 +128,6 @@ export type Player = {
   color: PlayerColor
   cards: Card[]
 }
-export type BotName = 'random'
 export type CensoredPlayer = Omit<Player, 'cards'> & {
   currentCards: Card[]
   censoredCards: CensoredCard[]
@@ -230,14 +229,6 @@ export function isNonEmptyArray<T>(arr: T[]): arr is NonEmptyArray<T> {
   return arr.length > 0
 }
 
-export type NonStrictParameters<F> = F extends (...args: unknown[]) => unknown
-  ? Parameters<F>
-  : never
-
-export type NonStrictReturnType<F> = F extends (...args: unknown[]) => unknown
-  ? ReturnType<F>
-  : never
-
 export type RpcProxy<T extends { [key: string]: (...args: any[]) => any }> =
   PromisifyMethods<T> & { notify: PromisifyMethods<T> }
 
@@ -245,4 +236,10 @@ export type PromisifyMethods<
   T extends { [key: string]: (...args: any[]) => any }
 > = {
   [K in keyof T]: (...args: Parameters<T[K]>) => Promise<ReturnType<T[K]>>
+}
+
+export function assertExhaustive(value: never): never {
+  throw new Error(
+    `Run time has mismatch between types: ${JSON.stringify(value)}`
+  )
 }

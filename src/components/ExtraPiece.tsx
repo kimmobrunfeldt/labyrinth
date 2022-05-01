@@ -3,6 +3,7 @@ import { RotateIcon } from 'src/components/Icons'
 import Piece, { PIECE_BORDER_RADIUS } from 'src/components/Piece'
 import * as t from 'src/gameTypes'
 import { getIsMyTurn, getPlayerInTurn } from 'src/utils/uiUtils'
+import { zIndices } from 'src/zIndices'
 
 export type Props = JSX.IntrinsicElements['div'] & {
   onClickExtraPiece: () => void
@@ -80,7 +81,7 @@ export const ExtraPiece = ({
         style={{
           pointerEvents: 'none',
           position: 'absolute',
-          zIndex: 10,
+          zIndex: zIndices.extraPiece + 1,
           top: '50%',
           left: '50%',
           width: '30%',

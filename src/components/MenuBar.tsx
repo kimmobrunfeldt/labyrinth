@@ -42,7 +42,7 @@ function getCenterElement(
       const player = gameState.players[gameState.playerTurn]
       const label =
         player.id === gameState.me.id
-          ? `${action === 'push' ? '➡️' : '🏃'} Your turn to ${action}`
+          ? `${action === 'push' ? '➡️ ' : '🏃 '} Your turn to ${action}`
           : `${player.name}'s turn to ${action}`
       return <span>{label}</span>
     }
@@ -70,7 +70,6 @@ function getPlayIcon({
     padding: '10px',
     width: '20px',
     height: '20px',
-    zIndex: 10,
   }
 
   switch (gameState.stage) {
@@ -182,7 +181,6 @@ export default function MenuBar({
               padding: '10px',
               width: '20px',
               height: '20px',
-              zIndex: 10,
             }}
             src={`${process.env.PUBLIC_URL}/Settings.svg`}
             alt="Settings"

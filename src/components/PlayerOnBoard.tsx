@@ -2,6 +2,7 @@ import _ from 'lodash'
 import React from 'react'
 import * as t from 'src/gameTypes'
 import { getPlayerInTurn } from 'src/utils/uiUtils'
+import { zIndices } from 'src/zIndices'
 
 export type Props = JSX.IntrinsicElements['div'] & {
   player: t.CensoredPlayer
@@ -29,7 +30,7 @@ export const PlayerOnBoard = ({
       title={`${player.name}, ${cardsFoundLabel} found`}
       key={player.id}
       style={{
-        zIndex: 900,
+        zIndex: zIndices.playerOnBoard,
         width: '100%',
         pointerEvents: 'none',
         height: '100%',
@@ -48,7 +49,7 @@ export const PlayerOnBoard = ({
         <span
           style={{
             position: 'absolute',
-            zIndex: 900,
+            zIndex: zIndices.playerOnBoard,
             left: '50%',
             top: '-25px',
             transform: 'translateX(-50%)',

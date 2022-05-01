@@ -7,6 +7,7 @@ import MenuBar from 'src/components/MenuBar'
 import { createMessage, Message, MessageBox } from 'src/components/MessagesBox'
 import { NextTrophy } from 'src/components/NextTrophy'
 import { getNewRotation } from 'src/core/board'
+import { BotId } from 'src/core/bots/availableBots'
 import { connectBot } from 'src/core/bots/random'
 import { createClient } from 'src/core/client'
 import * as t from 'src/gameTypes'
@@ -18,6 +19,7 @@ import {
   uiPushPositionToBoard,
 } from 'src/utils/uiUtils'
 import { getLogger, uuid } from 'src/utils/utils'
+import { zIndices } from 'src/zIndices'
 
 type Props = {
   serverPeerId: string
@@ -134,13 +136,15 @@ export const GameClient = (props: Props) => {
     return gameState.playerTurn === myIndex
   }
 
-  async function onAddBot(name: t.BotName) {
+  async function onAddBot(name: BotId) {
     switch (name) {
       case 'random': {
-        await connectBot(`bot-${uuid()}`, {
+        return await connectBot(`bot-${uuid()}`, {
           peerId: serverPeerId,
         })
       }
+      default:
+        t.assertExhaustive(name)
     }
   }
 
@@ -382,7 +386,7 @@ const BoardShuffleIcon = ({
       style={{
         cursor: 'pointer',
         position: 'absolute',
-        zIndex: 10,
+        zIndex: zIndices.boardShuffleIcon,
         width: '10%',
         maxWidth: '60px',
       }}
