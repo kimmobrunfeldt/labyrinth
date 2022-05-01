@@ -25,20 +25,28 @@ function getSavedAdminPanelOpen(): boolean {
 
 function getCenterElement(
   gameState: t.ClientGameState,
-  serverPeerId: string
+  serverPeerId: string,
+  showAdmin: boolean
 ): JSX.Element {
   switch (gameState.stage) {
-    case 'setup':
-      return (
-        <div>
-          <span style={{ color: '#555', marginRight: '4px', fontWeight: 500 }}>
-            ID:
-          </span>
-          <a target="_blank" href={`#${serverPeerId}`} rel="noreferrer">
-            {serverPeerId}
-          </a>
-        </div>
-      )
+    case 'setup': {
+      if (showAdmin) {
+        return (
+          <div>
+            <span
+              style={{ color: '#555', marginRight: '4px', fontWeight: 500 }}
+            >
+              ID:
+            </span>
+            <a target="_blank" href={`#${serverPeerId}`} rel="noreferrer">
+              {serverPeerId}
+            </a>
+          </div>
+        )
+      } else {
+        return <span>Waiting for host to start ...</span>
+      }
+    }
     case 'playing': {
       const action = gameState.playerHasPushed ? 'move' : 'push'
       const player = gameState.players[gameState.playerTurn]
@@ -205,7 +213,7 @@ export default function MenuBar({
         </div>
       )}
       <div style={{ textAlign: 'center', fontSize: '14px', padding: '0 5px' }}>
-        {getCenterElement(gameState, serverPeerId)}
+        {getCenterElement(gameState, serverPeerId, showAdmin)}
       </div>
       <div
         style={{
