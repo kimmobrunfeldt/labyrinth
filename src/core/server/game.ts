@@ -406,6 +406,10 @@ export function createGame(opts: CreateGameOptions) {
     return found
   }
 
+  function maybeGetPlayerById(playerId: string): t.Player | undefined {
+    return _.find(gameState.players, (p) => p.id === playerId)
+  }
+
   function isPlayersTurn(playerId: string): boolean {
     const idx = playerIndexById(playerId)
     return gameState.playerTurn === idx
@@ -434,6 +438,7 @@ export function createGame(opts: CreateGameOptions) {
     shuffleBoard,
     addPlayer,
     getPlayerById,
+    maybeGetPlayerById,
     removePlayer,
     promotePlayer,
     pushByPlayer,

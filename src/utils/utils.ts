@@ -28,8 +28,8 @@ export function colorToName(color: t.PlayerColor) {
   )?.[0] as keyof typeof t.PlayerColor
 }
 
-export function getPlayerLabel(player: t.Player | t.CensoredPlayer): string {
-  return `${player.name}`
+export function getPlayerLabel(player?: t.Player | t.CensoredPlayer): string {
+  return `${player?.name ?? 'Spectator'}`
 }
 
 // TODO: implement turn skip on timeout

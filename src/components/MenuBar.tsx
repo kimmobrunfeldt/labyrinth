@@ -13,6 +13,7 @@ export type Props = {
   serverPeerId: string
   gameState: t.ClientGameState
   onAddBot: AdminPanelProps['onAddBot']
+  onSpectateClick: AdminPanelProps['onSpectateClick']
   onRemovePlayer: AdminPanelProps['onRemovePlayer']
   onStartGameClick: AdminPanelProps['onStartGameClick']
   onSettingsChange: AdminPanelProps['onSettingsChange']
@@ -119,6 +120,7 @@ export default function MenuBar({
   showAdmin,
   onAddBot,
   onStartGameClick,
+  onSpectateClick,
   onRestartGameClick,
   onRemovePlayer,
   onSettingsChange,
@@ -166,6 +168,7 @@ export default function MenuBar({
           onCloseClick={() => setOpen(false)}
           gameState={gameState}
           onAddBot={onAddBot}
+          onSpectateClick={onSpectateClick}
           onRemovePlayer={onRemovePlayer}
           onStartGameClick={_onStartGameClick}
           onRestartGameClick={_onRestartGameClick}

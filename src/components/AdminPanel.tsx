@@ -14,6 +14,7 @@ export type Props = {
   onRestartGameClick: () => void
   onAddBot: (name: BotId) => void
   onRemovePlayer: (id: t.Player['id']) => void
+  onSpectateClick: () => void
   onSettingsChange: (settings: Partial<t.GameSettings>) => void
   gameState: t.ClientGameState
   onCloseClick: () => void
@@ -30,6 +31,7 @@ const AdminPanel = ({
   onRemovePlayer,
   onSettingsChange,
   onCloseClick,
+  onSpectateClick,
 }: Props) => {
   useOnKeyDown(ESCAPE_KEY, onCloseClick)
 
@@ -132,6 +134,7 @@ const AdminPanel = ({
               <FormSection>
                 <Subtitle>Players</Subtitle>
                 {gameState.players.map((p) => {
+                  const isMe = p.id === gameState.me.id
                   return (
                     <div
                       style={{
@@ -162,10 +165,12 @@ const AdminPanel = ({
                           {p.id === gameState.me.id ? ' (host)' : ''}
                         </span>
                       </div>
-                      {gameState.stage === 'setup' && p.id !== gameState.me.id && (
+                      {gameState.stage === 'setup' && (
                         <div
-                          onClick={() => onRemovePlayer(p.id)}
-                          title="Remove"
+                          onClick={() =>
+                            isMe ? onSpectateClick() : onRemovePlayer(p.id)
+                          }
+                          title={isMe ? 'Spectate' : 'Remove'}
                           role="button"
                           style={{
                             cursor: 'pointer',

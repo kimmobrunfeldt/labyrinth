@@ -101,7 +101,12 @@ export function getPlayerInTurn(
 }
 
 export function getIsMyTurn(gameState: t.ClientGameState): boolean {
-  return gameState.me.id === getPlayerInTurn(gameState).id
+  const player = getPlayerInTurn(gameState)
+  if (!player) {
+    return false
+  }
+
+  return gameState.me.id === player.id
 }
 
 /**

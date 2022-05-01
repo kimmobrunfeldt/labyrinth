@@ -43,6 +43,7 @@ export async function createServer(
       const serverMethods: t.ServerMethods = {
         start,
         restart,
+        makeSpectator,
         sendMessage,
         getConnectedPlayers: () => getPlayersWithStatus('connected'),
       }
@@ -64,9 +65,11 @@ export async function createServer(
 
       async function setPlayer() {
         mutableServerState.players[playerId] = {
+          id: playerId,
           client,
           connection,
           status: 'connected',
+          spectator: mutableServerState.players[playerId]?.spectator ?? false,
         }
       }
 
@@ -75,15 +78,11 @@ export async function createServer(
         setPlayer()
         // This is sending the data twice for joined player
         await mutableServerState.players[playerId].client.onJoin(
-          getStateForPlayer(
-            game,
-            playerId,
-            mutableServerState.players[playerId].status
-          )
+          getStateForPlayer(game, mutableServerState.players, playerId)
         )
         await sendStateToEveryone()
         sendMessage(
-          `${getPlayerLabel(game.getPlayerById(playerId))} reconnected`
+          `${getPlayerLabel(game.maybeGetPlayerById(playerId))} reconnected`
         )
         return
       }
@@ -93,11 +92,7 @@ export async function createServer(
           setPlayer()
           game.addPlayer({ id: playerId, name: playerName }) // will also send state
           await mutableServerState.players[playerId].client.onJoin(
-            getStateForPlayer(
-              game,
-              playerId,
-              mutableServerState.players[playerId].status
-            )
+            getStateForPlayer(game, mutableServerState.players, playerId)
           )
         }
       } catch (err) {
@@ -109,7 +104,9 @@ export async function createServer(
         return
       }
 
-      sendMessage(`${getPlayerLabel(game.getPlayerById(playerId))} connected`)
+      sendMessage(
+        `${getPlayerLabel(game.maybeGetPlayerById(playerId))} connected`
+      )
     },
     onClientDisconnect: async (playerId) => {
       logger.log(`Player '${playerId}' disconnected`)
@@ -120,13 +117,16 @@ export async function createServer(
         return
       }
 
-      const player = game.getPlayerById(playerId)
+      const serverPlayer = mutableServerState.players[playerId]
+      const player = game.maybeGetPlayerById(playerId)
       if (game.getState().stage !== 'setup') {
         mutableServerState.players[playerId].status = 'disconnected'
         await sendStateToEveryone()
       } else {
         delete mutableServerState.players[playerId]
-        game.removePlayer(playerId)
+        if (!serverPlayer.spectator) {
+          game.removePlayer(playerId)
+        }
       }
 
       sendMessage(`${getPlayerLabel(player)} disconnected`)
@@ -151,7 +151,7 @@ export async function createServer(
     return forAllServerPlayers(
       (player) =>
         player.client.onStateChange(
-          getStateForPlayer(game, player.id, 'connected')
+          getStateForPlayer(game, mutableServerState.players, player.id)
         ),
       'connected'
     )
@@ -179,6 +179,13 @@ export async function createServer(
         })
       })
     )
+  }
+
+  async function makeSpectator(playerId: string) {
+    mutableServerState.players[playerId].spectator = true
+    if (game.maybeGetPlayerById(playerId)) {
+      game.removePlayer(playerId)
+    }
   }
 
   async function restart() {

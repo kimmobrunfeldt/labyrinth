@@ -32,11 +32,7 @@ export function startServerRpcForClient({
   })
   const serverRpc: t.PromisifyMethods<t.ServerRpcAPI> = {
     getState: async () =>
-      getStateForPlayer(
-        game,
-        playerId,
-        mutableServerState.players[playerId].status
-      ),
+      getStateForPlayer(game, mutableServerState.players, playerId),
     getMyPosition: async () => game.getPlayerPosition(playerId),
     getMyCurrentCards: async () => game.getPlayersCurrentCards(playerId),
     setExtraPieceRotation: async (rotation: t.Rotation) =>
@@ -72,6 +68,7 @@ export function startServerRpcForClient({
       {
         start: serverMethods.start,
         restart: serverMethods.restart,
+        spectate: () => serverMethods.makeSpectator(playerId),
         promote: async () => game.promotePlayer(playerId),
         shuffleBoard: async (level?: t.ShuffleLevel) => {
           game.shuffleBoard(level)
@@ -113,9 +110,13 @@ export function startServerRpcForClient({
 
 export function getStateForPlayer(
   game: GameControl,
-  playerId: string,
-  playerConnectionStatus: t.InternalPlayerConnectionStatus
+  serverPlayers: t.ServerState['players'],
+  playerId: string
 ): t.ClientGameState {
+  if (serverPlayers[playerId].spectator) {
+    return getStateForSpectator(game, serverPlayers, playerId)
+  }
+
   function censorPlayer({
     cards: playerCards,
     ...p
@@ -149,9 +150,9 @@ export function getStateForPlayer(
     },
     players: state.players.map((p) => ({
       ...censorPlayer(p),
-      status: (playerConnectionStatus === 'toBeKicked'
+      status: (serverPlayers[p.id].status === 'toBeKicked'
         ? 'disconnected'
-        : playerConnectionStatus) as t.PlayerConnectionStatus,
+        : serverPlayers[p.id].status) as t.PlayerConnectionStatus,
     })),
     me: censorPlayer(game.getPlayerById(playerId)),
     myCurrentCards: game.getPlayersCurrentCards(playerId),
@@ -159,5 +160,70 @@ export function getStateForPlayer(
       game.getState().stage === 'setup'
         ? undefined
         : game.getPlayerPosition(playerId),
+  }
+}
+
+export function getStateForSpectator(
+  game: GameControl,
+  serverPlayers: t.ServerState['players'],
+  playerId: string
+): t.ClientGameState {
+  const gameState = game.getState()
+  const playerInTurn: t.Player | undefined =
+    gameState.players[gameState.playerTurn]
+
+  function censorPlayer({
+    cards: playerCards,
+    ...p
+  }: t.Player): t.CensoredPlayer {
+    return {
+      ...p,
+      censoredCards: playerCards.map(
+        (c): t.CensoredCard =>
+          c.found ? { found: true, trophy: c.trophy } : { found: false }
+      ),
+      currentCards: playerInTurn
+        ? game.getPlayersCurrentCards(playerInTurn.id)
+        : [],
+    }
+  }
+
+  const { cards: _allGameCards, board, ...state } = game.getState()
+  return {
+    ...state,
+    board: {
+      pieces: board.pieces.map((row) =>
+        row.map((p) => {
+          if (!p) {
+            return p
+          }
+          const { players, ...rest } = p
+          return {
+            ...rest,
+            players: players.map(censorPlayer),
+          }
+        })
+      ),
+    },
+    players: state.players.map((p) => ({
+      ...censorPlayer(p),
+      status: (serverPlayers[p.id].status === 'toBeKicked'
+        ? 'disconnected'
+        : serverPlayers[p.id].status) as t.PlayerConnectionStatus,
+    })),
+    me: censorPlayer({
+      id: playerId,
+      name: 'Spectator',
+      originalName: 'Spectator',
+      color: '#66666' as t.PlayerColor,
+      cards: playerInTurn ? game.getPlayerById(playerInTurn.id).cards : [],
+    }),
+    myCurrentCards: playerInTurn
+      ? game.getPlayersCurrentCards(playerInTurn.id)
+      : [],
+    myPosition:
+      game.getState().stage === 'setup'
+        ? undefined
+        : game.getPlayerPosition(playerInTurn.id),
   }
 }

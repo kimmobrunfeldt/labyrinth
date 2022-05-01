@@ -213,6 +213,13 @@ export const GameClient = (props: Props) => {
     void client.serverRpc.setPushPositionHover(boardPos)
   }
 
+  async function onSpectateClick() {
+    if (!client || !adminToken) {
+      return
+    }
+    await client.serverRpc.spectate(adminToken)
+  }
+
   async function onStartGameClick() {
     if (!client || !adminToken) {
       return
@@ -286,6 +293,7 @@ export const GameClient = (props: Props) => {
           gameState={gameState}
           showAdmin={!_.isUndefined(adminToken)}
           onAddBot={onAddBot}
+          onSpectateClick={onSpectateClick}
           onRemovePlayer={onRemovePlayer}
           onStartGameClick={onStartGameClick}
           onRestartGameClick={onRestartGameClick}

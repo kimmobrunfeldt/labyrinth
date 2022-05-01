@@ -5,6 +5,7 @@ import Peer from 'peerjs'
 export type ServerMethods = {
   start: () => Promise<void>
   restart: () => Promise<void>
+  makeSpectator: (playerId: string) => Promise<void>
   getConnectedPlayers: () => Record<string, ServerPlayerWithStatus<'connected'>>
   sendMessage: (msg: string, opts?: MessageFormatOptions) => Promise<void[]>
 }
@@ -13,9 +14,11 @@ export type ServerState = {
   players: Record<string, ServerPlayer>
 }
 export type ServerPlayer = {
+  id: string
   client: RpcProxy<ClientRpcAPI>
   connection: Peer.DataConnection
   status: InternalPlayerConnectionStatus
+  spectator: boolean
 }
 
 export type ServerPlayerWithStatus<T extends InternalPlayerConnectionStatus> =
@@ -50,6 +53,7 @@ export type ServerRpcAPI = {
   start: (adminToken: string) => void
   restart: (adminToken: string) => void
   promote: (adminToken: string) => void
+  spectate: (adminToken: string) => void
   shuffleBoard: (adminToken: string, level?: ShuffleLevel) => void
   removePlayer: (adminToken: string, id: Player['id']) => void
   changeSettings: (adminToken: string, settings: Partial<GameSettings>) => void
