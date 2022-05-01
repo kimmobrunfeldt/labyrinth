@@ -369,7 +369,6 @@ export const GameClient = (props: Props) => {
         <VisibilityToggle
           visible={playerLabelsVisible}
           onToggle={() => {
-            console.log('set')
             setPlayerLabelsVisible(!playerLabelsVisible)
           }}
         />
