@@ -138,6 +138,10 @@ export function createGame(opts: CreateGameOptions) {
       )
     }
 
+    if (game.players.length < 1) {
+      throw new Error(`Game must have at least one player`)
+    }
+
     game.stage = 'playing'
     // Choose random player to start
     game.playerTurn = assertDefined(_.sample(_.times(game.players.length)))

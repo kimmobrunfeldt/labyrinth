@@ -211,6 +211,7 @@ const AdminPanel = ({
             >
               <Button
                 condensed
+                disabled={gameState.players.length === 0}
                 onClick={
                   gameState.stage === 'setup'
                     ? onStartGameClick
