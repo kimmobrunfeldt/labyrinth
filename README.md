@@ -3,6 +3,9 @@
 Online version of the Labyrinth board game. The game server will run
 on the host's browser and networking happens peer-to-peer.
 
+
+Note: the game might be very slow on mobile, as it might fallback to a public TURN server. Workaround is to use e.g. a Wifi network.
+
 Optimized for Chrome and iOS Safari. Uses React for the UI. _Clean React code was not the goal.._
 
 ## Get started
