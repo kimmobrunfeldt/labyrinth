@@ -8,7 +8,7 @@ import { getNewRotation } from 'src/core/board'
 import { connectBot } from 'src/core/bots/random'
 import { createClient } from 'src/core/client'
 import * as t from 'src/gameTypes'
-import { ClientGameState, Position } from 'src/gameTypes'
+import { ClientGameState } from 'src/gameTypes'
 import { getKey, saveKey } from 'src/sessionStorage'
 import {
   boardPushPositionToUIPosition,
@@ -40,11 +40,12 @@ function Container({ children }: { children: React.ReactNode }) {
   )
 }
 
-type Message = { time: Date; message: string }
-function createMessage(msg: string): Message {
+type Message = { time: Date; message: string; options?: t.MessageFormatOptions }
+function createMessage(msg: string, opts?: t.MessageFormatOptions): Message {
   return {
     time: new Date(),
     message: msg,
+    options: opts,
   }
 }
 
@@ -104,7 +105,7 @@ export const GameClient = (props: Props) => {
           setError(undefined)
           setGameState(state)
         },
-        onPushPositionHover: async (boardPos?: Position) => {
+        onPushPositionHover: async (boardPos) => {
           const uiPos = boardPos
             ? boardPushPositionToUIPosition(boardPos)
             : undefined
@@ -114,8 +115,8 @@ export const GameClient = (props: Props) => {
           console.error('Rejected by server', message)
           setError(new Error(message))
         },
-        onMessage: async (msg) => {
-          onMessage(msg)
+        onMessage: async (msg, opts) => {
+          onMessage(msg, opts)
         },
       })
 
@@ -125,8 +126,8 @@ export const GameClient = (props: Props) => {
     // We don't want to run this again pretty much ever
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function onMessage(msg: string) {
-    setMessages((msgs) => [...msgs, createMessage(msg)])
+  function onMessage(msg: string, opts?: t.MessageFormatOptions) {
+    setMessages((msgs) => [...msgs, createMessage(msg, opts)])
   }
 
   function isMyTurn() {
@@ -463,6 +464,7 @@ const MessageBox = ({ messages }: { messages: Message[] }) => {
             display: 'flex',
             alignItems: 'flex-start',
             fontFamily: 'monospace',
+            fontWeight: msg.options?.bold ? 'bold' : 'normal',
           }}
         >
           <div style={{ marginRight: '10px' }}>

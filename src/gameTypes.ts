@@ -24,10 +24,13 @@ export type ServerRpcAPI = {
   changeSettings: (adminToken: string, settings: Partial<GameSettings>) => void
 }
 
+export type MessageFormatOptions = {
+  bold?: boolean
+}
 export type ClientRpcAPI = {
   onJoin: (gameState: ClientGameState) => void
   onStateChange: (gameState: ClientGameState) => void
-  onMessage: (message: string) => void
+  onMessage: (message: string, opts?: MessageFormatOptions) => void
   onPushPositionHover: (hoverPos?: Position) => void
   onServerReject: (message: string) => void
 }

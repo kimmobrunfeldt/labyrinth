@@ -203,10 +203,15 @@ export async function createServer(
     )
   }
 
-  async function sendMessage(msg: string) {
-    Object.keys(getConnectedPlayers()).forEach((playerId) => {
-      players[playerId as keyof typeof players].client.onMessage(msg)
-    })
+  async function sendMessage(msg: string, opts: t.MessageFormatOptions = {}) {
+    return Promise.all(
+      Object.keys(getConnectedPlayers()).map((playerId) => {
+        return players[playerId as keyof typeof players].client.onMessage(
+          msg,
+          opts
+        )
+      })
+    )
   }
 
   function getStateForPlayer(playerId: string): t.ClientGameState {
@@ -289,7 +294,7 @@ export async function createServer(
   async function turn() {
     const player = game.whosTurn()
     logger.log('Turn by', player.name)
-    sendMessage(`${getPlayerLabel(player)} in turn`)
+    await sendMessage(`${getPlayerLabel(player)} in turn`)
 
     const currentCardsStart = game.getPlayersCurrentCards(player.id)
     const turnCounterNow = game.getState().turnCounter
@@ -314,8 +319,9 @@ export async function createServer(
       if (turnCounterNow !== game.getState().turnCounter) {
         const cardsNow = game.getPlayersCurrentCards(player.id)
         if (currentCardsStart[0].trophy !== cardsNow[0]?.trophy) {
-          sendMessage(
-            `🌟 ${player.name} found ${currentCardsStart[0].trophy}! 🌟`
+          await sendMessage(
+            `${player.name} found ${currentCardsStart[0].trophy}! ⭐️`,
+            { bold: true }
           )
         }
 
