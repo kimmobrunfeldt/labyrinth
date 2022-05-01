@@ -1,24 +1,15 @@
 import MoleClient from 'mole-rpc/MoleClientProxified'
-import MoleServer from 'mole-rpc/MoleServer'
-import Peer from 'peerjs'
 import { assertDefined } from 'src/core/server/board'
-import {
-  createGame,
-  CreateGameOptions,
-  GameControl,
-} from 'src/core/server/game'
+import { createGame, CreateGameOptions } from 'src/core/server/game'
 import { createServerNetworking } from 'src/core/server/networking'
+import {
+  getStateForPlayer,
+  startServerRpcForClient,
+} from 'src/core/server/serverRpc'
 import * as t from 'src/gameTypes'
 import { getLogger } from 'src/utils/logger'
 import { PeerJsTransportClient } from 'src/utils/TransportClient'
-import { PeerJsTransportServer } from 'src/utils/TransportServer'
-import {
-  getPlayerLabel,
-  getRandomAdminToken,
-  sleep,
-  wrapAdminMethods,
-  wrapWithLogging,
-} from 'src/utils/utils'
+import { getPlayerLabel, getRandomAdminToken, sleep } from 'src/utils/utils'
 
 const logger = getLogger('📓 SERVER:')
 
@@ -52,10 +43,11 @@ export async function createServer(
       const serverMethods: t.ServerMethods = {
         start,
         restart,
-        getConnectedPlayers,
         sendMessage,
+        getConnectedPlayers: () => getPlayersWithStatus('connected'),
       }
       startServerRpcForClient({
+        logger,
         connection,
         adminToken,
         game,
@@ -141,40 +133,50 @@ export async function createServer(
     },
   })
 
-  function getConnectedPlayers(): Record<
-    string,
-    t.ServerPlayerWithStatus<'connected'>
-  > {
-    const connected: Record<string, t.ServerPlayerWithStatus<'connected'>> = {}
+  function getPlayersWithStatus<
+    T extends t.InternalPlayerConnectionStatus = t.InternalPlayerConnectionStatus
+  >(status?: T): Record<string, t.ServerPlayerWithStatus<T>> {
+    const playersWithStatus: Record<string, t.ServerPlayerWithStatus<T>> = {}
     Object.keys(mutableServerState.players).forEach((playerId) => {
-      if (mutableServerState.players[playerId].status === 'connected') {
-        connected[playerId] = mutableServerState.players[
+      if (status && mutableServerState.players[playerId].status === status) {
+        playersWithStatus[playerId] = mutableServerState.players[
           playerId
-        ] as t.ServerPlayerWithStatus<'connected'>
+        ] as t.ServerPlayerWithStatus<T>
       }
     })
-    return connected
+    return playersWithStatus
   }
 
   async function sendStateToEveryone() {
-    await Promise.all(
-      Object.keys(getConnectedPlayers()).map((playerId) => {
-        const clientGameState = getStateForPlayer(game, playerId, 'connected')
-        const playerRpcClient =
-          mutableServerState.players[playerId as keyof t.ServerState['players']]
-            .client
-        return playerRpcClient.onStateChange(clientGameState)
-      })
+    return forAllServerPlayers(
+      (player) =>
+        player.client.onStateChange(
+          getStateForPlayer(game, player.id, 'connected')
+        ),
+      'connected'
     )
   }
 
   async function sendMessage(msg: string, opts: t.MessageFormatOptions = {}) {
+    return forAllServerPlayers(
+      (player) => player.client.onMessage(msg, opts),
+      'connected'
+    )
+  }
+
+  /**
+   * Executes a function for all server players. Done concurrently for everyone.
+   */
+  function forAllServerPlayers<T>(
+    cb: (serverPlayer: t.ServerPlayer & { id: string }) => Promise<T>,
+    status?: t.InternalPlayerConnectionStatus
+  ): Promise<T[]> {
     return Promise.all(
-      Object.keys(getConnectedPlayers()).map((playerId) => {
-        const playerRpcClient =
-          mutableServerState.players[playerId as keyof t.ServerState['players']]
-            .client
-        return playerRpcClient.onMessage(msg, opts)
+      Object.keys(getPlayersWithStatus(status)).map((playerId) => {
+        return cb({
+          ...mutableServerState.players[playerId],
+          id: playerId,
+        })
       })
     )
   }
@@ -203,7 +205,7 @@ export async function createServer(
       } catch (e) {
         logger.warn(e)
         logger.warn('Skipping turn')
-        sendMessage(`Skipping turn for ${game.whosTurn().name}`)
+        sendMessage(`Skipping turn for ${getPlayerLabel(game.whosTurn())}`)
         game.nextTurn()
       }
     }
@@ -238,12 +240,14 @@ export async function createServer(
         const cardsNow = game.getPlayersCurrentCards(player.id)
         if (currentCardsStart[0].trophy !== cardsNow[0]?.trophy) {
           await sendMessage(
-            `${player.name} found ${currentCardsStart[0].trophy}! ⭐️`,
+            `${getPlayerLabel(player)} found ${
+              currentCardsStart[0].trophy
+            }! ⭐️`,
             { bold: true }
           )
         }
 
-        logger.log('Player', player.name, 'has finished their turn')
+        logger.log('Player', getPlayerLabel(player), 'has finished their turn')
         return
       }
 
@@ -264,157 +268,11 @@ export async function createServer(
         game.whosTurn().name
       } after ${TURN_TIMEOUT_SECONDS} seconds`
     )
-    throw new Error(`Turn timeout for player ${player.name}`)
+    throw new Error(`Turn timeout for player ${getPlayerLabel(player)}`)
   }
 
   return {
     peerId: network.peerId,
     adminToken,
-  }
-}
-
-function startServerRpcForClient({
-  connection,
-  adminToken,
-  game,
-  playerId,
-  mutableServerState,
-  serverMethods,
-}: {
-  connection: Peer.DataConnection
-  adminToken: string
-  game: GameControl
-  playerId: string
-  mutableServerState: t.ServerState
-  serverMethods: t.ServerMethods
-}) {
-  const server = new MoleServer({
-    transports: [],
-  })
-  const serverRpc: t.PromisifyMethods<t.ServerRpcAPI> = {
-    getState: async () =>
-      getStateForPlayer(
-        game,
-        playerId,
-        mutableServerState.players[playerId].status
-      ),
-    getMyPosition: async () => game.getPlayerPosition(playerId),
-    getMyCurrentCards: async () => game.getPlayersCurrentCards(playerId),
-    setExtraPieceRotation: async (rotation: t.Rotation) =>
-      game.setExtraPieceRotationByPlayer(playerId, rotation),
-    setPushPositionHover: async (position?: t.Position) => {
-      if (!game.isPlayersTurn(playerId)) {
-        throw new Error(
-          `It's not ${playerId}'s turn. Ignoring push position hover.`
-        )
-      }
-
-      // Forward the information directly to all other clients
-      Object.keys(serverMethods.getConnectedPlayers()).forEach((pId) => {
-        if (playerId === pId) {
-          // Don't send to the client itself
-          return
-        }
-
-        mutableServerState.players[
-          pId as keyof typeof mutableServerState.players
-        ].client.onPushPositionHover(position)
-      })
-    },
-    setMyName: async (name: string) => game.setNameByPlayer(playerId, name),
-    move: async (moveTo: t.Position) => game.moveByPlayer(playerId, moveTo),
-    push: async (pushPos: t.PushPosition) =>
-      game.pushByPlayer(playerId, pushPos),
-    ...wrapAdminMethods(
-      {
-        start: serverMethods.start,
-        restart: serverMethods.restart,
-        promote: async () => game.promotePlayer(playerId),
-        shuffleBoard: async (level?: t.ShuffleLevel) => {
-          game.shuffleBoard(level)
-        },
-        removePlayer: async (id: t.Player['id']) => {
-          logger.log(`Player '${playerId}' will be kicked`)
-
-          const player = game.getPlayerById(id)
-          if (id in mutableServerState.players) {
-            mutableServerState.players[id].status = 'toBeKicked'
-            await mutableServerState.players[id].client.onServerReject(
-              'host kicked you out'
-            )
-            mutableServerState.players[id].connection.close()
-            delete mutableServerState.players[id]
-          }
-
-          game.removePlayer(id)
-          serverMethods.sendMessage(
-            `${getPlayerLabel(player)} disconnected (kicked)`
-          )
-        },
-        changeSettings: async (settings: Partial<t.GameSettings>) => {
-          game.changeSettings(settings)
-        },
-      },
-      adminToken
-    ),
-  }
-  const rpcLogger = getLogger(`SERVER RPC (${playerId}):`)
-  server.expose(wrapWithLogging(rpcLogger, serverRpc))
-  server.registerTransport(
-    new PeerJsTransportServer({
-      peerConnection: connection,
-    })
-  )
-  return server
-}
-
-function getStateForPlayer(
-  game: GameControl,
-  playerId: string,
-  playerConnectionStatus: t.InternalPlayerConnectionStatus
-): t.ClientGameState {
-  function censorPlayer({
-    cards: playerCards,
-    ...p
-  }: t.Player): t.CensoredPlayer {
-    return {
-      ...p,
-      censoredCards: playerCards.map(
-        (c): t.CensoredCard =>
-          c.found ? { found: true, trophy: c.trophy } : { found: false }
-      ),
-      currentCards: game.getPlayersCurrentCards(p.id),
-    }
-  }
-
-  const { cards: _allGameCards, board, ...state } = game.getState()
-  return {
-    ...state,
-    board: {
-      pieces: board.pieces.map((row) =>
-        row.map((p) => {
-          if (!p) {
-            return p
-          }
-          const { players, ...rest } = p
-          return {
-            ...rest,
-            players: players.map(censorPlayer),
-          }
-        })
-      ),
-    },
-    players: state.players.map((p) => ({
-      ...censorPlayer(p),
-      status: (playerConnectionStatus === 'toBeKicked'
-        ? 'disconnected'
-        : playerConnectionStatus) as t.PlayerConnectionStatus,
-    })),
-    me: censorPlayer(game.getPlayerById(playerId)),
-    myCurrentCards: game.getPlayersCurrentCards(playerId),
-    myPosition:
-      game.getState().stage === 'setup'
-        ? undefined
-        : game.getPlayerPosition(playerId),
   }
 }
