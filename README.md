@@ -1,6 +1,6 @@
 # Labyrinth
 
-Online version of the Labyrinth board game. The game server will run
+Online version of the Labyrinth board game. The game server runs
 on the host's browser and networking happens peer-to-peer.
 
 
