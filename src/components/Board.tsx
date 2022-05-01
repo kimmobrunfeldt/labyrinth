@@ -7,9 +7,9 @@ import { EmptyPiece, PIECE_MARGIN_PX } from 'src/components/Piece'
 import { PieceOnBoard } from 'src/components/PieceOnBoard'
 import { PushPosition } from 'src/components/PushPosition'
 import { getPushPosition } from 'src/core/server/board'
-import { centered } from 'src/css'
 import 'src/css/Board.css'
 import * as t from 'src/gameTypes'
+import { centered } from 'src/utils/css'
 import {
   boardPushPositionToUIPosition,
   directionToCaretRotation,

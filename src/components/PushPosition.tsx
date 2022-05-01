@@ -1,7 +1,7 @@
 import React from 'react'
 import { CaretUp } from 'src/components/Icons'
 import { PIECE_MARGIN_PX } from 'src/components/Piece'
-import { centered } from 'src/css'
+import { centered } from 'src/utils/css'
 import { directionToCaretRotation, UIPushPosition } from 'src/utils/uiUtils'
 
 type PushPositionProps = JSX.IntrinsicElements['div'] & {

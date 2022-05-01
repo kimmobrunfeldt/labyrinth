@@ -12,7 +12,7 @@ import { createClient } from 'src/core/client'
 import { getNewRotation } from 'src/core/server/board'
 import * as t from 'src/gameTypes'
 import { ClientGameState } from 'src/gameTypes'
-import { getKey, saveKey } from 'src/sessionStorage'
+import { getKey, saveKey } from 'src/utils/sessionStorage'
 import {
   boardPushPositionToUIPosition,
   UIPushPosition,

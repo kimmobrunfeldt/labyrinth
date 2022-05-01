@@ -5,7 +5,7 @@ import { CrossIcon } from 'src/components/Icons'
 import { Select } from 'src/components/Select'
 import { BotId } from 'src/core/bots/availableBots'
 import * as t from 'src/gameTypes'
-import { useOnKeyDown } from 'src/useOnKeyDown'
+import { useOnKeyDown } from 'src/utils/useOnKeyDown'
 import { zIndices } from 'src/zIndices'
 
 export type Props = {
