@@ -203,6 +203,9 @@ function getBoardsFromPushCombinations(
       ...current.extraPiece,
       rotation: c.rotation,
     })
+    // Transfer players to the other edge
+    const addedPiece = getPieceAt(cloned.filledBoard, c.pushPosition)
+    addedPiece.players = extra.originalPiece.players
     return {
       filledBoard: cloned.filledBoard,
       extraPiece: extra.piece,
