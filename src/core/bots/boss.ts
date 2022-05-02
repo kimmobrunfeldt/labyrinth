@@ -1,7 +1,10 @@
 import { cartesianProduct } from 'combinatorial-generators'
-import { pipe, take } from 'iter-ops'
 import _ from 'lodash'
-import { BotCreateOptions, BotImplementation } from 'src/core/bots/framework'
+import {
+  BotCreateOptions,
+  BotImplementation,
+  BOT_THINKING_DELAY,
+} from 'src/core/bots/framework'
 import { Client } from 'src/core/client'
 import {
   assertDefined,
@@ -40,7 +43,14 @@ export async function create({
 }: BotCreateOptions): Promise<BotImplementation> {
   return {
     async onMyTurn(getState) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, BOT_THINKING_DELAY / 2)
+      )
       await push(getState(), client)
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, BOT_THINKING_DELAY / 2)
+      )
       await move(getState(), client)
     },
   }
@@ -111,14 +121,13 @@ function findNextPushCombination(state: t.ClientGameState): PushCombination {
   const combs = getPushCombinations(current)
   for (const futureBoard of getBoardsFromPushCombinations(current, combs)) {
     const review = reviewBoard(state, futureBoard)
-    console.log('review for board', review)
+    console.log('Review for board', review)
     if (review > 0) {
       return assertDefined(futureBoard.combination)
     }
   }
 
-  console.log('defaulting', [...getPushCombinations(current)])
-  return [...pipe(getPushCombinations(current), take(1))][0]
+  return assertDefined(_.sample([...getPushCombinations(current)]))
 }
 
 const getRotations = (): t.Rotation[] => [0, 90, 180, 270]
@@ -153,10 +162,6 @@ type PushCombination = {
  * state.
  */
 function getPushCombinations(board: Board): Iterable<PushCombination> {
-  console.log(
-    'allowed',
-    getAllowedPushPositions(board.filledBoard, board.previousPushPosition)
-  )
   return iterable.map(
     cartesianProduct(
       getAllowedPushPositions(board.filledBoard, board.previousPushPosition),

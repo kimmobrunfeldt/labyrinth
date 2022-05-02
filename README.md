@@ -26,6 +26,7 @@ See the [reference bot](src/core/bots/example.ts) for all methods. [Random bot](
 Tips:
 * You can remove yourself from the players and add two bots to spectate their super fast playing.
 * You can automatically spectate and add two random bots like this: http://localhost:4000/?spectate=true&bots=random,random
+* `&botDelay=100ms` query parameter makes bots react faser
 
 ## Code architecture
 

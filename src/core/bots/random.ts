@@ -1,5 +1,9 @@
 import _ from 'lodash'
-import { BotCreateOptions, BotImplementation } from 'src/core/bots/framework'
+import {
+  BotCreateOptions,
+  BotImplementation,
+  BOT_THINKING_DELAY,
+} from 'src/core/bots/framework'
 import { Client } from 'src/core/client'
 import {
   assertDefined,
@@ -36,7 +40,9 @@ export async function create({
 }: BotCreateOptions): Promise<BotImplementation> {
   return {
     async onMyTurn(getState) {
-      await new Promise((resolve) => setTimeout(resolve, 2000)) // "thinking time"
+      await new Promise((resolve) =>
+        setTimeout(resolve, BOT_THINKING_DELAY / 2)
+      )
 
       const state = getState()
       // Loop until success, because the bot doesn't understand the blocked push
@@ -50,7 +56,9 @@ export async function create({
 
       const stateAfterPush = getState()
       // Do a move
-      await new Promise((resolve) => setTimeout(resolve, 3000)) // "thinking time"
+      await new Promise((resolve) =>
+        setTimeout(resolve, BOT_THINKING_DELAY / 2)
+      )
       await move(stateAfterPush, client)
     },
   }

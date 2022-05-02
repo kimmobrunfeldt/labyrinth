@@ -1,3 +1,4 @@
+import _ from 'lodash'
 import { availableBots, BotId } from 'src/core/bots/availableBots'
 import { Client, createClient } from 'src/core/client'
 import * as t from 'src/gameTypes'
@@ -21,6 +22,10 @@ export type BotImplementation = {
   onMessage?: t.PromisifyMethods<t.ClientRpcAPI>['onMessage']
   onServerReject?: t.PromisifyMethods<t.ClientRpcAPI>['onServerReject']
 }
+
+const params = new URLSearchParams(window.location.search)
+const parsed = parseInt(params.get('botDelay') ?? '', 10)
+export const BOT_THINKING_DELAY = _.isFinite(parsed) ? parsed : 4000
 
 /**
  * Provides a framework for making new bots easier.
