@@ -4,6 +4,7 @@ import {
   assertDefined,
   getOppositePosition,
   getPieceAt,
+  getPlayerPositionFromBoard,
   isValidPlayerMove,
   pushWithPiece,
 } from 'src/core/server/board'
@@ -356,12 +357,7 @@ export function createGame(opts: CreateGameOptions) {
 
   function getPlayerPosition(playerId: string): t.Position {
     const game = stageGuard(['playing', 'finished'])
-
-    const pieces = _.flatten(game.board.pieces)
-    const piece = _.find(pieces, (p) =>
-      (p?.players ?? []).some((player) => player.id === playerId)
-    )
-    return assertDefined(piece).position
+    return getPlayerPositionFromBoard(game.board, playerId)
   }
 
   // XXX: does not validate move

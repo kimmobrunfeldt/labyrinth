@@ -9,7 +9,7 @@ import { NextTrophy } from 'src/components/NextTrophy'
 import { VisibilityToggle } from 'src/components/VisibilityToggle'
 import { BotId } from 'src/core/bots/availableBots'
 import { connectBot } from 'src/core/bots/framework'
-import { createClient } from 'src/core/client'
+import { Client, createClient } from 'src/core/client'
 import { getNewRotation } from 'src/core/server/board'
 import * as t from 'src/gameTypes'
 import { ClientGameState } from 'src/gameTypes'
@@ -27,6 +27,7 @@ import { zIndices } from 'src/zIndices'
 type Props = {
   serverPeerId: string
   adminToken?: string
+  onClientCreated: (client: Client) => void
 }
 
 function Container({ children }: { children: React.ReactNode }) {
@@ -121,6 +122,7 @@ export const GameClient = (props: Props) => {
         },
       })
 
+      props.onClientCreated(client)
       setClient(client)
     }
     init()

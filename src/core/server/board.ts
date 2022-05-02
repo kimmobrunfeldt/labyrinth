@@ -1,5 +1,6 @@
 import _ from 'lodash'
 import { createPieceBag } from 'src/core/server/pieces'
+import * as t from 'src/gameTypes'
 import {
   Board,
   ConnectedPieces,
@@ -641,4 +642,15 @@ export function getOppositePosition(
     case 'left':
       return { ...pos, x: oppositeIndex(boardWidth, pos.x) }
   }
+}
+
+export function getPlayerPositionFromBoard(
+  board: t.Board,
+  playerId: string
+): t.Position {
+  const pieces = _.compact(_.flatten(board.pieces))
+  const piece = _.find(pieces, (p) =>
+    (p?.players ?? []).some((player) => player.id === playerId)
+  )
+  return assertDefined(piece).position
 }

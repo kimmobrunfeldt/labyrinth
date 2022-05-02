@@ -23,7 +23,9 @@ See the [reference bot](src/core/bots/example.ts) for all methods. [Random bot](
 1. Set bot's name with `export const name ...`
 1. Implement `onMyTurn` at minimum
 
-Tip: remove yourself from the players and add two bots to spectate their super fast playing.
+Tips:
+* You can remove yourself from the players and add two bots to spectate their super fast playing.
+* You can automatically spectate and add two random bots like this: http://localhost:4000/?spectate=true&bots=random,random
 
 ## Code architecture
 
