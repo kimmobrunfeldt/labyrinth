@@ -23,6 +23,8 @@ See the [reference bot](src/core/bots/example.ts) for all methods. [Random bot](
 1. Set bot's name with `export const name ...`
 1. Implement `onMyTurn` at minimum
 
+Tip: remove yourself from the players and add two bots to spectate their super fast playing.
+
 ## Code architecture
 
 * [Game server](src/core/server/server.ts): isolated piece which could be ran in dedicated-mode somewhere else. The server is controlled by the admin client via JSON RPC _(transported via PeerJS WebRTC data connection)_ protocol. In practice, the browser which creates the server also runs the admin client.
