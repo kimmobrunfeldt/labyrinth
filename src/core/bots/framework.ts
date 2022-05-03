@@ -41,7 +41,7 @@ export async function connectBot(
   }
 
   let gameState: t.ClientGameState
-  const turnsReacted = new Set<t.ClientGameState['turnCounter']>()
+  let turnsReacted = new Set<t.ClientGameState['turnCounter']>()
   const emoji = getUniqueEmoji()
   const logger = getLogger(`${emoji} BOT (${botId}):`) // eslint-disable-line no-irregular-whitespace
 
@@ -60,6 +60,10 @@ export async function connectBot(
       }
     },
     onStateChange: async (state) => {
+      if (gameState.stage !== state.stage) {
+        // Reset turn reaction memory when game is restarted
+        turnsReacted = new Set<t.ClientGameState['turnCounter']>()
+      }
       gameState = state
 
       if (bot.onStateChange) {
