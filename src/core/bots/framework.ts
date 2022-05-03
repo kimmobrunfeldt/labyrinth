@@ -60,7 +60,7 @@ export async function connectBot(
       }
     },
     onStateChange: async (state) => {
-      if (gameState.stage !== state.stage) {
+      if (gameState && gameState.stage !== state.stage) {
         // Reset turn reaction memory when game is restarted
         turnsReacted = new Set<t.ClientGameState['turnCounter']>()
       }

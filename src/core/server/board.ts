@@ -654,3 +654,21 @@ export function getPlayerPositionFromBoard(
   )
   return assertDefined(piece).position
 }
+
+export function movePlayerPosition(
+  board: t.FilledBoard,
+  playerId: string,
+  newPos: t.Position
+) {
+  const currentPos = getPlayerPositionFromBoard(board, playerId)
+  const currentPiece = getPieceAt(board, currentPos)
+  const player = assertDefined(
+    currentPiece.players.find((p) => p.id === playerId)
+  )
+  // Remove from current piece
+  currentPiece.players = currentPiece.players.filter((p) => p.id !== playerId)
+
+  // Move to new piece
+  const newPiece = getPieceAt(board, newPos)
+  newPiece.players.push(player)
+}
