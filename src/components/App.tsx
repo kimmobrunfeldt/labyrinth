@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import Debug from 'src/components/Debug'
 import GameClient from 'src/components/GameClient'
 import StartPage from 'src/components/StartPage'
 import { BotId } from 'src/core/bots/availableBots'
@@ -22,7 +23,7 @@ export const App = () => {
     if (serverPeerId) {
       joinGame(serverPeerId)
     }
-  }, [setServer])
+  }, [])
 
   // Special parameters to make bot development easier
 
@@ -79,6 +80,10 @@ export const App = () => {
       isServerHost: false,
     })
     window.location.hash = serverPeerId
+  }
+
+  if (params.get('debug') === 'true') {
+    return <Debug />
   }
 
   return (

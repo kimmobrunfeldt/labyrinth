@@ -26,8 +26,6 @@ import { zIndices } from 'src/zIndices'
 
 export type Props = {
   gameState: t.ClientGameState
-  board: t.ClientGameState['board']
-  players: t.ClientGameState['players']
   // Additional styles for each piece
   boardPiecesStyles?: React.CSSProperties[][]
   onMove: (piece: t.CensoredPieceOnBoard) => void
@@ -37,9 +35,6 @@ export type Props = {
   extraPiece: t.Piece
   previousPushPosition?: t.PushPosition
   lastServerHover?: UIPushPosition
-  isMyTurn: boolean
-  playerInTurn: t.CensoredPlayer
-  playerHasPushed: boolean
   playerLabelsVisible: boolean
 }
 

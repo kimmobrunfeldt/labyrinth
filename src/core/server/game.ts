@@ -50,32 +50,7 @@ export function createGame(opts: CreateGameOptions) {
     game.pieceBag = pieceBag as [t.Piece]
   })
 
-  function createInitialState() {
-    const deck = createCardDeck()
-    const initial: Readonly<t.Game> = {
-      stage: 'setup',
-      cards: deck,
-      pieceBag: createPieceBag(),
-      board: {
-        pieces: createInitialBoardPieces(),
-      },
-      playerColors: createPlayerColors(),
-      players: [],
-      playerWhoStarted: 0,
-      playerTurn: 0,
-      playerHasPushed: false,
-      winners: [],
-      previousPushPosition: undefined,
-      turnCounter: 0,
-      settings: {
-        trophyCount: cardsPerPlayer,
-        shuffleLevel: 'hard',
-      },
-    }
-    return initial
-  }
-
-  const gameState = createInitialState()
+  const gameState = createInitialState(opts.cardsPerPlayer)
   shuffleBoard()
 
   /**
@@ -173,6 +148,7 @@ export function createGame(opts: CreateGameOptions) {
     const {
       players: _players,
       playerColors: _playerColors,
+      settings: _settings,
       ...initial
     } = createInitialState()
     const keys = Object.keys(initial) as Array<keyof typeof initial>
@@ -453,6 +429,31 @@ export function createGame(opts: CreateGameOptions) {
     setExtraPieceRotationByPlayer,
     setNameByPlayer,
   }
+}
+
+export function createInitialState(cardsPerPlayer = 5) {
+  const deck = createCardDeck()
+  const initial: Readonly<t.Game> = {
+    stage: 'setup',
+    cards: deck,
+    pieceBag: createPieceBag(),
+    board: {
+      pieces: createInitialBoardPieces(),
+    },
+    playerColors: createPlayerColors(),
+    players: [],
+    playerWhoStarted: 0,
+    playerTurn: 0,
+    playerHasPushed: false,
+    winners: [],
+    previousPushPosition: undefined,
+    turnCounter: 0,
+    settings: {
+      trophyCount: cardsPerPlayer,
+      shuffleLevel: 'hard',
+    },
+  }
+  return initial
 }
 
 export function getPlayersBetweenCurrentAndPlayerWhoStarted(

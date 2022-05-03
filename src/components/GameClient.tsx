@@ -345,17 +345,12 @@ export const GameClient = (props: Props) => {
             <BoardComponent
               gameState={gameState}
               extraPiece={gameState.pieceBag[0]}
-              players={gameState.players}
-              board={gameState.board}
               onMove={onMove}
               onPush={onPush}
               onClickExtraPiece={onClickExtraPiece}
               previousPushPosition={gameState.previousPushPosition}
               lastServerHover={lastServerHover}
               onPushPositionHover={onPushPositionHover}
-              isMyTurn={isMyTurn()}
-              playerHasPushed={gameState.playerHasPushed}
-              playerInTurn={gameState.players[gameState.playerTurn]}
               playerLabelsVisible={playerLabelsVisible}
             />
             {adminToken && gameState.stage === 'setup' && (
