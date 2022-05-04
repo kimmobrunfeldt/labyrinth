@@ -48,6 +48,7 @@ export type ServerRpcAPI = {
   setMyName: (name: string) => void
   move: (moveTo: Position) => void
   push: (pushPos: PushPosition) => void
+  sendMessage: (message: string) => void
 } & {
   // Admin API
   start: (adminToken: string) => void

@@ -60,6 +60,16 @@ export function startServerRpcForClient({
         ].client.onPushPositionHover(position)
       })
     },
+    sendMessage: async (message: string) => {
+      const player = game.getPlayerById(playerId)
+
+      // Forward the information directly to all other clients
+      Object.keys(serverMethods.getConnectedPlayers()).forEach((pId) => {
+        mutableServerState.players[
+          pId as keyof typeof mutableServerState.players
+        ].client.onMessage(`${player.name} says: ${message}`)
+      })
+    },
     setMyName: async (name: string) => game.setNameByPlayer(playerId, name),
     move: async (moveTo: t.Position) => game.moveByPlayer(playerId, moveTo),
     push: async (pushPos: t.PushPosition) =>

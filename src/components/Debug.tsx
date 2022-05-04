@@ -4,7 +4,7 @@ import { useResizeDetector } from 'react-resize-detector'
 import { MessageBox } from 'src/components/MessagesBox'
 import PieceComponent, { PIECE_MARGIN_PX } from 'src/components/Piece'
 import { PieceOnBoard } from 'src/components/PieceOnBoard'
-import { findBestTurn } from 'src/core/bots/bigbrain'
+import { findBestTurnDfs2 } from 'src/core/bots/bigbrain'
 import { getPieceAt, randomFillBoard } from 'src/core/server/board'
 import { createInitialState } from 'src/core/server/game'
 import 'src/css/Board.css'
@@ -89,7 +89,7 @@ export const Debug = () => {
       setBoard(board as unknown as AlgoBoard)
     )
 
-    findBestTurn(FAKE_STATE)
+    findBestTurnDfs2(FAKE_STATE)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!board) {

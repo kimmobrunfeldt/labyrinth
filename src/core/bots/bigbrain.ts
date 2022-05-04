@@ -1,11 +1,7 @@
 import { cartesianProduct } from 'combinatorial-generators'
 import _ from 'lodash'
 import { emitter } from 'src/components/Debug'
-import {
-  BotCreateOptions,
-  BotImplementation,
-  BOT_THINKING_DELAY,
-} from 'src/core/bots/framework'
+import { BotCreateOptions, BotImplementation } from 'src/core/bots/framework'
 import { Client } from 'src/core/client'
 import {
   assertDefined,
@@ -18,6 +14,7 @@ import {
   pushWithPiece,
 } from 'src/core/server/board'
 import * as t from 'src/gameTypes'
+import { format } from 'src/utils/utils'
 
 export const name = 'Big Brain'
 
@@ -45,21 +42,31 @@ export async function create({
 }: BotCreateOptions): Promise<BotImplementation> {
   return {
     async onMyTurn(getState) {
-      const best = await findBestTurn(getState())
-      const first = getTopMostParent(best)
+      const best = await findBestTurnDfs2(getState())
+      const turnPath = getTurnPath(best.turn)
+      const { topParent, depth } = getTopMostParent(best.turn)
 
-      await new Promise((resolve) =>
-        setTimeout(resolve, BOT_THINKING_DELAY / 2)
+      const moves = _.reverse(turnPath).map(
+        (t) =>
+          `push at ${format.pos(t.push!.pushPosition)} (${
+            t.push!.rotation
+          }), move to ${format.pos(t.moveTo!)}`
       )
+      const pre = best.fallback ? 'fallback solution' : 'optimal solution'
+      await client.serverRpc.sendMessage(
+        `${pre} at depth ${depth}: ${moves.join(' -> ')}`
+      )
+
       await client.serverRpc.setExtraPieceRotation(
-        assertDefined(first.push).rotation
+        assertDefined(topParent.push).rotation
       )
-      await client.serverRpc.push(assertDefined(first.push).pushPosition)
-
-      await new Promise((resolve) =>
-        setTimeout(resolve, BOT_THINKING_DELAY / 2)
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await client.serverRpc.setPushPositionHover(
+        assertDefined(topParent.push).pushPosition
       )
-      await client.serverRpc.move(assertDefined(first.moveTo))
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      await client.serverRpc.push(assertDefined(topParent.push).pushPosition)
+      await client.serverRpc.move(assertDefined(topParent.moveTo))
     },
   }
 }
@@ -100,12 +107,27 @@ async function move(gameState: t.ClientGameState, client: Client) {
   await client.serverRpc.move(newPos)
 }
 
-function getTopMostParent(turn: Turn): Turn {
+function getTopMostParent(turn: Turn): { topParent: Turn; depth: number } {
   let current = turn
+  let steps = 0
   while (current.previousTurn) {
     current = current.previousTurn
+    steps++
   }
-  return current
+  return {
+    topParent: current,
+    depth: steps,
+  }
+}
+
+function getTurnPath(turn: Turn): Turn[] {
+  let current = turn
+  const turns: Turn[] = [turn]
+  while (current.previousTurn) {
+    current = current.previousTurn
+    turns.push(current)
+  }
+  return turns
 }
 
 function getAllowedPushPositions(
@@ -126,6 +148,113 @@ function getAllowedPushPositions(
   )
 }
 
+export async function findBestTurnDfs2(
+  state: t.ClientGameState
+): Promise<{ turn: Turn; fallback: boolean }> {
+  const startTime = new Date().getTime()
+  const visited: Board[] = []
+  const stack: Turn[] = [stateToCurrentTurn(state)]
+  let fallbackTurn: Turn = stack[0]
+
+  while (stack.length > 0) {
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    const turn = stack.pop()! // just checked in while loop
+    fallbackTurn = turn
+
+    // Give 5 seconds time to find a solution
+    if (new Date().getTime() - startTime > 10 * 1000) {
+      break
+    }
+
+    if (hasBeenVisited(state.me.id, visited, turn.boardAfterMove)) {
+      continue
+    }
+    visited.push(turn.boardAfterMove)
+    emitter.dispatch('board', turn.boardAfterMove)
+
+    const review = reviewBoard(state, turn.boardAfterMove)
+    if (review > 0) {
+      return { turn, fallback: false }
+    }
+
+    if (turn.depth >= 2) {
+      continue
+    }
+
+    const turnCombinations = [
+      ...getTurnCombinations(state.me.id, turn.boardAfterMove),
+    ]
+    for (const turnCombination of turnCombinations) {
+      for (const move of turnCombination.movePositions) {
+        const boardAfterMove = _.cloneDeep(turnCombination.boardAfterPush)
+        movePlayerPosition(boardAfterMove.filledBoard, state.me.id, move)
+
+        const newTurn: Turn = {
+          // If the prev turn doesn't have a push -> it's the starting point
+          // In that case let's not mark it as the previous push
+          previousTurn: turn.push ? turn : undefined,
+          push: turnCombination.push,
+          moveTo: move,
+          boardAfterMove,
+          depth: turn.depth + 1,
+        }
+        stack.push(newTurn)
+      }
+    }
+  }
+
+  return {
+    turn: _.sample(stack) ?? fallbackTurn,
+    fallback: true,
+  }
+}
+
+export async function findBestTurnDfs(
+  state: t.ClientGameState,
+  turn: Turn = stateToCurrentTurn(state),
+  visited: Board[] = []
+): Promise<Turn | undefined> {
+  visited.push(turn.boardAfterMove)
+  const turnCombinations = [
+    ...getTurnCombinations(state.me.id, turn.boardAfterMove),
+  ]
+
+  for (const turnCombination of turnCombinations) {
+    console.log('move positions', turnCombination.movePositions.length)
+    for (const move of turnCombination.movePositions) {
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      const boardAfterMove = _.cloneDeep(turnCombination.boardAfterPush)
+      emitter.dispatch('board', boardAfterMove)
+      movePlayerPosition(boardAfterMove.filledBoard, state.me.id, move)
+
+      const newTurn: Turn = {
+        // If the prev turn doesn't have a push -> it's the starting point
+        // In that case let's not mark it as the previous push
+        previousTurn: turn.push ? turn : undefined,
+        push: turnCombination.push,
+        moveTo: move,
+        boardAfterMove,
+        depth: turn.depth + 1,
+      }
+
+      const review = reviewBoard(state, newTurn.boardAfterMove)
+      console.log('review', review, newTurn)
+      if (review > 0) {
+        return newTurn
+      }
+
+      if (
+        !hasBeenVisited(state.me.id, visited, boardAfterMove) &&
+        newTurn.depth <= 4
+      ) {
+        return findBestTurnDfs(state, newTurn, visited)
+      }
+    }
+  }
+
+  // No solution was found
+}
+
 export async function findBestTurn(
   state: t.ClientGameState,
   turns: Turn[] = [stateToCurrentTurn(state)],
@@ -142,7 +271,7 @@ export async function findBestTurn(
     for (const turnCombination of turnCombinations) {
       console.log('move positions', turnCombination.movePositions.length)
       for (const move of turnCombination.movePositions) {
-        await new Promise((resolve) => setTimeout(resolve, 100))
+        await new Promise((resolve) => setTimeout(resolve, 1000))
         const boardAfterMove = _.cloneDeep(turnCombination.boardAfterPush)
         emitter.dispatch('board', boardAfterMove)
         movePlayerPosition(boardAfterMove.filledBoard, state.me.id, move)

@@ -169,6 +169,7 @@ function createRpc(
     restart: (...args) => client.restart(...args),
     promote: (...args) => client.promote(...args),
     spectate: (...args) => client.spectate(...args),
+    sendMessage: (...args) => client.sendMessage(...args),
     shuffleBoard: (...args) => client.shuffleBoard(...args),
     removePlayer: (...args) => client.removePlayer(...args),
     changeSettings: (...args) => client.changeSettings(...args),
