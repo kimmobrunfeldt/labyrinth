@@ -46,7 +46,7 @@ export async function create({
       const turnPath = getTurnPath(best.turn)
       const { topParent, depth } = getTopMostParent(best.turn)
 
-      const moves = _.reverse(turnPath).map(
+      const turns = _.reverse(turnPath).map(
         (t) =>
           `push at ${format.pos(t.push!.pushPosition)} (${
             t.push!.rotation
@@ -54,7 +54,7 @@ export async function create({
       )
       const pre = best.fallback ? 'fallback solution' : 'optimal solution'
       await client.serverRpc.sendMessage(
-        `${pre} at depth ${depth}: ${moves.join(' -> ')}`
+        `${pre} with ${turns.length} turns: ${turns.join(' -> ')}`
       )
 
       await client.serverRpc.setExtraPieceRotation(
