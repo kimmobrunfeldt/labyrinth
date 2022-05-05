@@ -25,7 +25,7 @@ export type BotImplementation = {
 
 const params = new URLSearchParams(window.location.search)
 const parsed = parseInt(params.get('botDelay') ?? '', 10)
-export const BOT_THINKING_DELAY = _.isFinite(parsed) ? parsed : 7000
+export const BOT_THINKING_DELAY = _.isFinite(parsed) ? parsed : 5000
 
 /**
  * Provides a framework for making new bots easier.
