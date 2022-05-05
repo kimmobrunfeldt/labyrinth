@@ -4,8 +4,9 @@ import { useResizeDetector } from 'react-resize-detector'
 import { MessageBox } from 'src/components/MessagesBox'
 import PieceComponent, { PIECE_MARGIN_PX } from 'src/components/Piece'
 import { PieceOnBoard } from 'src/components/PieceOnBoard'
-import { findBestTurnDfs2 } from 'src/core/bots/bigbrain'
-import { getPieceAt, randomFillBoard } from 'src/core/server/board'
+import { findBestTurn } from 'src/core/bots/bigbrain'
+import { systematicRandom } from 'src/core/server/algorithms'
+import { getPieceAt } from 'src/core/server/board'
 import { createInitialState } from 'src/core/server/game'
 import 'src/css/Board.css'
 import * as t from 'src/gameTypes'
@@ -59,7 +60,11 @@ function setPlayerPosition(
 }
 
 const initial = createInitialState()
-randomFillBoard(initial.board, { pieceBag: initial.pieceBag })
+const shuffled = systematicRandom({
+  logger: console,
+  level: 'perfect',
+})
+
 const ME: t.CensoredPlayer = {
   id: '1',
   name: 'Bot',
@@ -75,8 +80,8 @@ const FAKE_STATE = {
   players: [ME],
   playerTurn: 0,
   cards: initial.cards,
-  pieceBag: initial.pieceBag,
-  board: initial.board,
+  pieceBag: shuffled.pieceBag,
+  board: shuffled.board,
   myCurrentCards: [initial.cards.pop()],
 } as unknown as t.ClientGameState
 setPlayerPosition(FAKE_STATE.board, ME, { x: 0, y: 0 })
@@ -89,7 +94,7 @@ export const Debug = () => {
       setBoard(board as unknown as AlgoBoard)
     )
 
-    findBestTurnDfs2(FAKE_STATE)
+    findBestTurn(FAKE_STATE)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!board) {

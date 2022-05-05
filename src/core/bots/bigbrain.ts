@@ -1,8 +1,12 @@
+import { Queue } from '@datastructures-js/queue'
 import { cartesianProduct } from 'combinatorial-generators'
 import _ from 'lodash'
 import { emitter } from 'src/components/Debug'
-import { BotCreateOptions, BotImplementation } from 'src/core/bots/framework'
-import { Client } from 'src/core/client'
+import {
+  BotCreateOptions,
+  BotImplementation,
+  BOT_THINKING_DELAY,
+} from 'src/core/bots/framework'
 import {
   assertDefined,
   BOARD_PUSH_POSITIONS,
@@ -14,7 +18,7 @@ import {
   pushWithPiece,
 } from 'src/core/server/board'
 import * as t from 'src/gameTypes'
-import { format } from 'src/utils/utils'
+import { format, sleep } from 'src/utils/utils'
 
 export const name = 'Big Brain'
 
@@ -42,9 +46,9 @@ export async function create({
 }: BotCreateOptions): Promise<BotImplementation> {
   return {
     async onMyTurn(getState) {
-      const best = await findBestTurnDfs2(getState())
+      const best = await findBestTurn(getState())
       const turnPath = getTurnPath(best.turn)
-      const { topParent, depth } = getTopMostParent(best.turn)
+      const { topParent } = getTopMostParent(best.turn)
 
       const turns = _.reverse(turnPath).map(
         (t) =>
@@ -57,54 +61,21 @@ export async function create({
         `${pre} with ${turns.length} turns: ${turns.join(' -> ')}`
       )
 
+      const delay = BOT_THINKING_DELAY / 4
+      await sleep(delay)
       await client.serverRpc.setExtraPieceRotation(
         assertDefined(topParent.push).rotation
       )
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await sleep(delay)
       await client.serverRpc.setPushPositionHover(
         assertDefined(topParent.push).pushPosition
       )
-      await new Promise((resolve) => setTimeout(resolve, 600))
+      await sleep(delay)
       await client.serverRpc.push(assertDefined(topParent.push).pushPosition)
+      await sleep(delay)
       await client.serverRpc.move(assertDefined(topParent.moveTo))
     },
   }
-}
-
-async function move(gameState: t.ClientGameState, client: Client) {
-  if (!gameState.myPosition) {
-    throw new Error('My position not found from state')
-  }
-
-  const currentPos = gameState.myPosition
-  const piece = getPieceAt(
-    gameState.board as unknown as t.FilledBoard,
-    currentPos
-  )
-  const connected = _.shuffle(
-    findConnected(
-      gameState.board as unknown as t.Board,
-      new Set([assertDefined(piece)])
-    )
-  )
-
-  const piecesWithMyTrophies = connected.filter(
-    (piece) =>
-      piece.trophy &&
-      gameState.myCurrentCards.map((c) => c.trophy).includes(piece.trophy)
-  )
-
-  if (piecesWithMyTrophies.length > 0) {
-    await client.serverRpc.move(piecesWithMyTrophies[0].position)
-    return
-  }
-
-  // Take another pos by random
-  const newPos =
-    connected.find(
-      (p) => p.position.x !== currentPos.x && p.position.y !== currentPos.y
-    )?.position ?? currentPos
-  await client.serverRpc.move(newPos)
 }
 
 function getTopMostParent(turn: Turn): { topParent: Turn; depth: number } {
@@ -122,9 +93,11 @@ function getTopMostParent(turn: Turn): { topParent: Turn; depth: number } {
 
 function getTurnPath(turn: Turn): Turn[] {
   let current = turn
+  console.log('current', current)
   const turns: Turn[] = [turn]
   while (current.previousTurn) {
     current = current.previousTurn
+    console.log('loop, current', current)
     turns.push(current)
   }
   return turns
@@ -181,25 +154,8 @@ export async function findBestTurnDfs2(
       continue
     }
 
-    const turnCombinations = [
-      ...getTurnCombinations(state.me.id, turn.boardAfterMove),
-    ]
-    for (const turnCombination of turnCombinations) {
-      for (const move of turnCombination.movePositions) {
-        const boardAfterMove = _.cloneDeep(turnCombination.boardAfterPush)
-        movePlayerPosition(boardAfterMove.filledBoard, state.me.id, move)
-
-        const newTurn: Turn = {
-          // If the prev turn doesn't have a push -> it's the starting point
-          // In that case let's not mark it as the previous push
-          previousTurn: turn.push ? turn : undefined,
-          push: turnCombination.push,
-          moveTo: move,
-          boardAfterMove,
-          depth: turn.depth + 1,
-        }
-        stack.push(newTurn)
-      }
+    for (const newTurn of getAdjacentNodes(state, turn)) {
+      stack.push(newTurn)
     }
   }
 
@@ -209,22 +165,11 @@ export async function findBestTurnDfs2(
   }
 }
 
-export async function findBestTurnDfs(
-  state: t.ClientGameState,
-  turn: Turn = stateToCurrentTurn(state),
-  visited: Board[] = []
-): Promise<Turn | undefined> {
-  visited.push(turn.boardAfterMove)
-  const turnCombinations = [
-    ...getTurnCombinations(state.me.id, turn.boardAfterMove),
-  ]
-
-  for (const turnCombination of turnCombinations) {
-    console.log('move positions', turnCombination.movePositions.length)
-    for (const move of turnCombination.movePositions) {
-      await new Promise((resolve) => setTimeout(resolve, 50))
+export function getAdjacentNodes(state: t.ClientGameState, turn: Turn) {
+  const turnCombinations = getTurnCombinations(state.me.id, turn.boardAfterMove)
+  return [...turnCombinations].flatMap((turnCombination) => {
+    return turnCombination.movePositions.map((move) => {
       const boardAfterMove = _.cloneDeep(turnCombination.boardAfterPush)
-      emitter.dispatch('board', boardAfterMove)
       movePlayerPosition(boardAfterMove.filledBoard, state.me.id, move)
 
       const newTurn: Turn = {
@@ -236,82 +181,51 @@ export async function findBestTurnDfs(
         boardAfterMove,
         depth: turn.depth + 1,
       }
-
-      const review = reviewBoard(state, newTurn.boardAfterMove)
-      console.log('review', review, newTurn)
-      if (review > 0) {
-        return newTurn
-      }
-
-      if (
-        !hasBeenVisited(state.me.id, visited, boardAfterMove) &&
-        newTurn.depth <= 4
-      ) {
-        return findBestTurnDfs(state, newTurn, visited)
-      }
-    }
-  }
-
-  // No solution was found
+      return newTurn
+    })
+  })
 }
 
-export async function findBestTurn(
-  state: t.ClientGameState,
-  turns: Turn[] = [stateToCurrentTurn(state)],
-  visited: Board[] = []
-): Promise<Turn> {
-  const nextBatch: Turn[] = []
+export async function findBestTurn(state: t.ClientGameState) {
+  const startTime = new Date().getTime()
+  const startTurn = stateToCurrentTurn(state)
+  const Q = new Queue<Turn>([startTurn])
+  const visited: Board[] = [startTurn.boardAfterMove]
 
-  console.log('batch of', turns.length, 'turns')
-  for (const turn of turns) {
-    const turnCombinations = [
-      ...getTurnCombinations(state.me.id, turn.boardAfterMove),
-    ]
-    console.log('new turn combinations', turnCombinations.length)
-    for (const turnCombination of turnCombinations) {
-      console.log('move positions', turnCombination.movePositions.length)
-      for (const move of turnCombination.movePositions) {
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        const boardAfterMove = _.cloneDeep(turnCombination.boardAfterPush)
-        emitter.dispatch('board', boardAfterMove)
-        movePlayerPosition(boardAfterMove.filledBoard, state.me.id, move)
+  while (!Q.isEmpty()) {
+    await sleep(0)
+    if (new Date().getTime() - startTime > 5000) {
+      break
+    }
 
-        const newTurn: Turn = {
-          // If the prev turn doesn't have a push -> it's the starting point
-          // In that case let's not mark it as the previous push
-          previousTurn: turn.push ? turn : undefined,
-          push: turnCombination.push,
-          moveTo: move,
-          boardAfterMove,
-          depth: turn.depth + 1,
-        }
+    const v = Q.dequeue()
 
-        //console.time('hasbeenvisited')
-        if (!hasBeenVisited(state.me.id, visited, boardAfterMove)) {
-          visited.push(newTurn.boardAfterMove)
-          nextBatch.push(newTurn)
-        }
-        //console.timeEnd('hasbeenvisited')
-        //console.log('visited', visited.length)
+    const neighbors = getAdjacentNodes(state, v)
+    for (const neighbor of neighbors) {
+      //emitter.dispatch('board', neighbor.boardAfterMove)
+
+      const review = reviewBoard(state, neighbor.boardAfterMove)
+      if (review > 0) {
+        return { turn: neighbor, fallback: false }
+      }
+
+      const hasVisited = hasBeenVisited(
+        state.me.id,
+        visited,
+        neighbor.boardAfterMove
+      )
+      if (!hasVisited) {
+        Q.enqueue(neighbor)
+        visited.push(neighbor.boardAfterMove)
       }
     }
   }
 
-  if (nextBatch.length === 0) {
-    return turns[0]
+  // In case no solution was found, return a random move
+  return {
+    turn: assertDefined(_.sample(getAdjacentNodes(state, startTurn))),
+    fallback: true,
   }
-
-  for (const newTurn of nextBatch) {
-    const review = reviewBoard(state, newTurn.boardAfterMove)
-    console.log('review', review, newTurn)
-    if (review > 0) {
-      return newTurn
-    }
-  }
-  console.log('nextbatch')
-
-  // If no turn was found at this depth, recurse more
-  return findBestTurn(state, nextBatch, visited)
 }
 
 function hasBeenVisited(
@@ -319,11 +233,18 @@ function hasBeenVisited(
   visited: Board[],
   candidate: Board
 ): boolean {
-  return visited.some((board) => {
+  for (let i = 0; i < visited.length; ++i) {
+    const board = visited[i]
     const myPos1 = getPlayerPositionFromBoard(board.filledBoard, myPlayerId)
     const myPos2 = getPlayerPositionFromBoard(candidate.filledBoard, myPlayerId)
-    return isSamePosition(myPos1, myPos2) && isSameBoard(board, candidate)
-  })
+    if (isSamePosition(myPos1, myPos2)) {
+      return true
+    }
+    if (isSameBoard(board, candidate)) {
+      return true
+    }
+  }
+  return false
 }
 
 function isSameBoard(board1: Board, board2: Board): boolean {
@@ -331,12 +252,18 @@ function isSameBoard(board1: Board, board2: Board): boolean {
     return false
   }
 
-  return board1.filledBoard.pieces.every((b1Row, y) => {
-    return b1Row.every((b1Piece, x) => {
+  for (let y = 0; y < board1.filledBoard.pieces.length; ++y) {
+    const b1Row = board1.filledBoard.pieces[y]
+    for (let x = 0; x < b1Row.length; ++x) {
+      const b1Piece = board1.filledBoard.pieces[y][x]
       const b2Piece = board2.filledBoard.pieces[y][x]
-      return b1Piece.rotation === b2Piece.rotation && b1Piece.id === b2Piece.id
-    })
-  })
+      if (b1Piece.rotation !== b2Piece.rotation || b1Piece.id !== b2Piece.id) {
+        return false
+      }
+    }
+  }
+
+  return true
 }
 
 const isSamePosition = (p1: t.Position, p2: t.Position) =>
@@ -415,7 +342,7 @@ function getTurnCombinations(
     const newBoard = getBoardFromPush(board, push)
     const myPos = getPlayerPositionFromBoard(newBoard.filledBoard, myPlayerId)
     const piece = getPieceAt(
-      board.filledBoard as unknown as t.FilledBoard,
+      newBoard.filledBoard as unknown as t.FilledBoard,
       myPos
     )
     const connected = findConnected(
@@ -476,3 +403,17 @@ const iterable = {
     }
   },
 }
+
+/*
+function createZobrist(width: number) {
+  const table: number[][] = []
+  for (let y = 0; y < width; ++y) {
+    table.push([])
+    for (let x = 0; x < width; ++x) {
+      table[y].push(_.random(Number.MAX_SAFE_INTEGER))
+    }
+  }
+
+  const x = new BigUint64Array([21n, 31n])
+}
+*/
