@@ -61,18 +61,18 @@ export async function create({
         `${pre} with ${turns.length} turns: ${turns.join(' -> ')}`
       )
 
-      const delay = BOT_THINKING_DELAY / 4
-      await sleep(delay)
-      await client.serverRpc.setExtraPieceRotation(
-        assertDefined(topParent.push).rotation
-      )
-      await sleep(delay)
+      await sleep(0.3 * BOT_THINKING_DELAY)
       await client.serverRpc.setPushPositionHover(
         assertDefined(topParent.push).pushPosition
       )
-      await sleep(delay)
+
+      await sleep(0.2 * BOT_THINKING_DELAY)
+      await client.serverRpc.setExtraPieceRotation(
+        assertDefined(topParent.push).rotation
+      )
+      await sleep(0.3 * BOT_THINKING_DELAY)
       await client.serverRpc.push(assertDefined(topParent.push).pushPosition)
-      await sleep(delay)
+      await sleep(0.2 * BOT_THINKING_DELAY)
       await client.serverRpc.move(assertDefined(topParent.moveTo))
     },
   }
