@@ -17,7 +17,7 @@ import {
   pushWithPiece,
 } from 'src/core/server/board'
 import * as t from 'src/gameTypes'
-import { format, sleep } from 'src/utils/utils'
+import { sleep } from 'src/utils/utils'
 
 export const name = 'Saboteur'
 
@@ -46,19 +46,7 @@ export async function create({
   return {
     async onMyTurn(getState) {
       const best = await findBestTurn(getState())
-      const turnPath = getTurnPath(best.turn)
       const { topParent } = getTopMostParent(best.turn)
-
-      const turns = _.reverse(turnPath).map(
-        (t) =>
-          `push at ${format.pos(t.push!.pushPosition)} (${
-            t.push!.rotation
-          }), move to ${format.pos(t.moveTo!)}`
-      )
-      const pre = best.fallback ? 'solution' : 'solution'
-      await client.serverRpc.sendMessage(
-        `${pre} with ${turns.length} turns: ${turns.join(' -> ')}`
-      )
 
       await sleep(0.3 * BOT_THINKING_DELAY)
       await client.serverRpc.setPushPositionHover(
@@ -92,11 +80,9 @@ function getTopMostParent(turn: Turn): { topParent: Turn; depth: number } {
 
 function getTurnPath(turn: Turn): Turn[] {
   let current = turn
-  console.log('current', current)
   const turns: Turn[] = [turn]
   while (current.previousTurn) {
     current = current.previousTurn
-    console.log('loop, current', current)
     turns.push(current)
   }
   return turns
@@ -147,7 +133,7 @@ export async function findBestTurn(state: t.ClientGameState) {
   const Q = new Queue<Turn>([startTurn])
   const visited: Board[] = [startTurn.boardAfterMove]
 
-  const reviewSoFar = 0
+  let reviewSoFar = -1000
   let bestSoFar = assertDefined(_.sample(getAdjacentNodes(state, startTurn)))
   while (!Q.isEmpty()) {
     await sleep(0)
@@ -161,17 +147,8 @@ export async function findBestTurn(state: t.ClientGameState) {
     for (const neighbor of neighbors) {
       const review = reviewBoard(state, neighbor.boardAfterMove)
       if (review > reviewSoFar) {
+        reviewSoFar = review
         bestSoFar = neighbor
-      }
-
-      const hasVisited = hasBeenVisited(
-        state.me.id,
-        visited,
-        neighbor.boardAfterMove
-      )
-      if (!hasVisited && neighbor.depth < 1) {
-        Q.enqueue(neighbor)
-        visited.push(neighbor.boardAfterMove)
       }
     }
   }
@@ -340,11 +317,8 @@ function reviewBoard(gameState: t.ClientGameState, board: Board): number {
   const myPos = getPlayerPositionFromBoard(board.filledBoard, gameState.me.id)
   const piece = getPieceAt(board.filledBoard, myPos)
 
-  let score = 0
-  if (piece.players.length > 1) {
-    // Prefer harassing someone
-    score += 10
-  }
+  // Prefer harassing someone
+  const score = piece.players.length > 1 ? 10 : 0
 
   const playerConnections = otherPlayerIds
     .map((id) => getPlayerPositionFromBoard(board.filledBoard, id))
@@ -354,14 +328,7 @@ function reviewBoard(gameState: t.ClientGameState, board: Board): number {
       return connected.length
     })
 
-  for (let i = 0; i < playerConnections.length; ++i) {
-    if (playerConnections[i] === 1) {
-      // If we can trap someone, let's do it
-      return 10000
-    }
-  }
-
-  return 1000 + score - _.sum(playerConnections)
+  return score - _.sum(playerConnections) * 2
 }
 
 // Relevant: https://github.com/tc39/proposal-iterator-helpers
