@@ -9,7 +9,11 @@ import { NextTrophy } from 'src/components/NextTrophy'
 import { VisibilityToggle } from 'src/components/VisibilityToggle'
 import { BotId } from 'src/core/bots/availableBots'
 import { connectBot } from 'src/core/bots/framework'
-import { Client, createClient } from 'src/core/client'
+import {
+  Client,
+  createClient as createPeerJsClient,
+} from 'src/core/client/peerjsClient'
+import { createClient as createWebSocketClient } from 'src/core/client/webSocketClient'
 import { getNewRotation } from 'src/core/server/board'
 import * as t from 'src/gameTypes'
 import { ClientGameState } from 'src/gameTypes'
@@ -27,7 +31,7 @@ import { zIndices } from 'src/zIndices'
 type Props = {
   serverPeerId: string
   adminToken?: string
-  onClientCreated: (client: Client) => void
+  onClientCreated: (client: Pick<Client, 'serverRpc'>) => void
 }
 
 function Container({ children }: { children: React.ReactNode }) {
@@ -51,7 +55,8 @@ export const GameClient = (props: Props) => {
   const { serverPeerId, adminToken } = props
   const [error, setError] = useState<Error | undefined>(undefined)
   const [client, setClient] = useState<
-    Awaited<ReturnType<typeof createClient>> | undefined
+    | Pick<Awaited<ReturnType<typeof createPeerJsClient>>, 'serverRpc'>
+    | undefined
   >(undefined)
   const [gameState, setGameState] = useState<ClientGameState | undefined>(
     undefined
@@ -78,49 +83,90 @@ export const GameClient = (props: Props) => {
       }
 
       const logEmoji = getUniqueEmoji()
-      const client = await createClient({
-        playerId,
-        logger: getLogger(`${logEmoji} CLIENT:`), // eslint-disable-line no-irregular-whitespace
-        rpcLogger: getLogger(`${logEmoji} CLIENT RPC:`), // eslint-disable-line no-irregular-whitespace
-        serverPeerId,
-        onJoin: async (state) => {
-          setGameState(state)
 
-          if (adminToken) {
-            await client.serverRpc.promote(adminToken)
-          }
-        },
-        onPeerError: (err) => {
-          setError(err)
-        },
-        onPeerConnectionClose: () => {
-          // setError(new Error('Game server disconnected'))
-        },
-        onPeerConnectionOpen: () => {
-          setError(undefined)
-        },
-        onPeerConnectionError: (err) => {
-          console.error(err)
-          setError(err)
-        },
-        onStateChange: async (state) => {
-          setError(undefined)
-          setGameState(state)
-        },
-        onPushPositionHover: async (boardPos) => {
-          const uiPos = boardPos
-            ? boardPushPositionToUIPosition(boardPos)
-            : undefined
-          setLastServerHover(uiPos)
-        },
-        onServerReject: async (message) => {
-          console.error('Rejected by server', message)
-          setError(new Error(message))
-        },
-        onMessage: async (msg, opts) => {
-          onMessage(msg, opts)
-        },
-      })
+      const params = new URLSearchParams(window.location.search)
+      const wsUrl = params.get('ws')
+      const client = wsUrl
+        ? await createWebSocketClient({
+            playerId,
+            logger: getLogger(`${logEmoji} CLIENT:`), // eslint-disable-line no-irregular-whitespace
+            rpcLogger: getLogger(`${logEmoji} CLIENT RPC:`), // eslint-disable-line no-irregular-whitespace
+            wsUrl,
+            onJoin: async (state) => {
+              setGameState(state)
+
+              if (adminToken) {
+                await client.serverRpc.promote(adminToken)
+              }
+            },
+            onWebSocketError: (err) => {
+              console.error(err)
+              setError(err)
+            },
+            onWebSocketOpen: () => {
+              setError(undefined)
+            },
+            onStateChange: async (state) => {
+              setError(undefined)
+              setGameState(state)
+            },
+            onPushPositionHover: async (boardPos) => {
+              const uiPos = boardPos
+                ? boardPushPositionToUIPosition(boardPos)
+                : undefined
+              setLastServerHover(uiPos)
+            },
+            onServerReject: async (message) => {
+              console.error('Rejected by server', message)
+              setError(new Error(message))
+            },
+            onMessage: async (msg, opts) => {
+              onMessage(msg, opts)
+            },
+          })
+        : await createPeerJsClient({
+            playerId,
+            logger: getLogger(`${logEmoji} CLIENT:`), // eslint-disable-line no-irregular-whitespace
+            rpcLogger: getLogger(`${logEmoji} CLIENT RPC:`), // eslint-disable-line no-irregular-whitespace
+            serverPeerId,
+            onJoin: async (state) => {
+              setGameState(state)
+
+              if (adminToken) {
+                await client.serverRpc.promote(adminToken)
+              }
+            },
+            onPeerError: (err) => {
+              setError(err)
+            },
+            onPeerConnectionClose: () => {
+              // setError(new Error('Game server disconnected'))
+            },
+            onPeerConnectionOpen: () => {
+              setError(undefined)
+            },
+            onPeerConnectionError: (err) => {
+              console.error(err)
+              setError(err)
+            },
+            onStateChange: async (state) => {
+              setError(undefined)
+              setGameState(state)
+            },
+            onPushPositionHover: async (boardPos) => {
+              const uiPos = boardPos
+                ? boardPushPositionToUIPosition(boardPos)
+                : undefined
+              setLastServerHover(uiPos)
+            },
+            onServerReject: async (message) => {
+              console.error('Rejected by server', message)
+              setError(new Error(message))
+            },
+            onMessage: async (msg, opts) => {
+              onMessage(msg, opts)
+            },
+          })
 
       props.onClientCreated(client)
       setClient(client)

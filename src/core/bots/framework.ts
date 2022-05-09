@@ -1,6 +1,6 @@
 import _ from 'lodash'
 import { availableBots, BotId } from 'src/core/bots/availableBots'
-import { Client, createClient } from 'src/core/client'
+import { Client, createClient } from 'src/core/client/peerjsClient'
 import * as t from 'src/gameTypes'
 import { getLogger, getUniqueEmoji, Logger } from 'src/utils/logger'
 

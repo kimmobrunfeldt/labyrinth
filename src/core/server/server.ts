@@ -1,10 +1,10 @@
 import { assertDefined } from 'src/core/server/board'
 import { createGame, CreateGameOptions } from 'src/core/server/game'
+import { createServerNetworking } from 'src/core/server/networking/networking'
 import {
   Connection,
   ConnectionMetadata,
-  createServerNetworking,
-} from 'src/core/server/networking'
+} from 'src/core/server/networking/utils'
 import { createServerRpc, getStateForPlayer } from 'src/core/server/serverRpc'
 import * as t from 'src/gameTypes'
 import { getLogger } from 'src/utils/logger'
@@ -21,9 +21,18 @@ export type GameServer = {
 }
 
 export async function createServer(
-  opts: CreateGameOptions & { peerId?: string } = {}
+  opts: CreateGameOptions & {
+    serverPeerId: string
+    serverWebSocketPort: number
+    adminToken?: string
+  }
 ): Promise<GameServer> {
-  const { peerId, ...gameOpts } = opts
+  const {
+    serverPeerId,
+    serverWebSocketPort,
+    adminToken: adminTokenInput,
+    ...gameOpts
+  } = opts
   // Will be mutated later
   const serverState: t.ServerState = {
     players: {},
@@ -32,10 +41,12 @@ export async function createServer(
     ...gameOpts,
     onStateChange: sendStateToEveryone,
   })
-  const adminToken = getRandomAdminToken()
+  const adminToken = adminTokenInput ? adminTokenInput : getRandomAdminToken()
+  logger.info(`Using admin token ${adminToken}`)
   const networking = await createServerNetworking({
     logger,
-    peerId,
+    serverPeerId,
+    serverWebSocketPort,
     onClientConnect: handleClientConnect,
     onClientDisconnect: handleClientDisconnect,
   })

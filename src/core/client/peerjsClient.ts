@@ -3,13 +3,13 @@ import MoleServer from 'mole-rpc/MoleServer'
 import X from 'mole-rpc/X'
 import Peer from 'peerjs'
 import retryify from 'promise-retryify'
-import { SERVER_TOWARDS_CLIENT_TIMEOUT_SECONDS } from 'src/core/server/networking'
+import { CLIENT_TOWARDS_SERVER_TIMEOUT_SECONDS } from 'src/core/server/networking/utils'
 import * as t from 'src/gameTypes'
 import { debugLevel, iceServers } from 'src/peerConfig'
 import { getLogger, getUniqueEmoji, Logger } from 'src/utils/logger'
+import { PeerJsTransportClient } from 'src/utils/mole-rpc/PeerJsTransportClient'
+import { PeerJsTransportServer } from 'src/utils/mole-rpc/PeerJsTransportServer'
 import { createRecycler, Recycler } from 'src/utils/recycler'
-import { PeerJsTransportClient } from 'src/utils/TransportClient'
-import { PeerJsTransportServer } from 'src/utils/TransportServer'
 import { waitForEvent, wrapWithLogging } from 'src/utils/utils'
 
 export type ClientOptions = {
@@ -143,14 +143,7 @@ function createRpc(
   )
 
   const client: t.RpcProxyWithNotify<t.ServerRpcAPI> = new MoleClient({
-    // This is required to be lower than the server's timeout towards clients.
-    // Think of this scenario:
-    // * You send "kick player 2" to server (5s timeout)
-    // * Server sends "server is full, get out" to player 2 (10s timeout)
-    // * Player 2 disconnects without responding
-    // * ... server keeps waiting
-    // * Your client times out before server responds to you -> recycle of your client
-    requestTimeout: (SERVER_TOWARDS_CLIENT_TIMEOUT_SECONDS - 2) * 1000,
+    requestTimeout: CLIENT_TOWARDS_SERVER_TIMEOUT_SECONDS * 1000,
     transport: new PeerJsTransportClient({
       peerConnection: conn,
     }),

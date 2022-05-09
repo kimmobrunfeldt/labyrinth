@@ -2,6 +2,10 @@
   "name": "labyrinth",
   "version": "0.1.0",
   "private": true,
+  "browser": {
+    "src/core/server/networking/networking.ts": "src/core/server/networking/browserNetworking.ts",
+    "ws": "src/utils/webSocketShim.ts"
+  },
   "dependencies": {
     "@datastructures-js/queue": "^4.1.3",
     "@testing-library/jest-dom": "^5.16.4",
@@ -23,6 +27,7 @@
     "lodash": "^4.17.21",
     "mole-rpc": "^1.0.5",
     "mole-rpc-transport-eventemitter": "^1.0.1",
+    "nodemon": "^2.0.16",
     "peerjs": "^1.3.2",
     "prettier": "^2.6.2",
     "promise-retryify": "^1.0.0",
@@ -31,8 +36,11 @@
     "react-resize-detector": "^7.0.0",
     "react-scripts": "5.0.1",
     "react-transition-group": "^4.4.2",
+    "split2": "^4.1.0",
     "typescript": "^4.6.3",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "ws": "^8.6.0",
+    "yargs": "^17.4.1"
   },
   "scripts": {
     "start": "PORT=4000 react-scripts start",
@@ -53,6 +61,7 @@
     ]
   },
   "devDependencies": {
+    "@types/split2": "^3.2.1",
     "eslint-plugin-prettier": "^4.0.0",
     "ts-node": "^10.7.0"
   }

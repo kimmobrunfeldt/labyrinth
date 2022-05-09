@@ -1,4 +1,10 @@
 {
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs",
+      "target": "ES2017" // For NodeJS 8 compat, see https://www.typescriptlang.org/tsconfig#target for more info
+    }
+  },
   "compilerOptions": {
     "target": "es2016",
     "lib": [

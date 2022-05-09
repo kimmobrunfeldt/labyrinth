@@ -4,14 +4,16 @@ import GameClient from 'src/components/GameClient'
 import StartPage from 'src/components/StartPage'
 import { BotId } from 'src/core/bots/availableBots'
 import { connectBot } from 'src/core/bots/framework'
-import { Client } from 'src/core/client'
+import { Client } from 'src/core/client/peerjsClient'
 import { createServer } from 'src/core/server/server'
 import { getKey, saveKey } from 'src/utils/sessionStorage'
 import { getRandomPeerId, uuid } from 'src/utils/utils'
 import './App.css'
 
 export const App = () => {
-  const [client, setClient] = useState<Client | undefined>(undefined)
+  const [client, setClient] = useState<Pick<Client, 'serverRpc'> | undefined>(
+    undefined
+  )
   const [server, setServer] = useState<
     { peerId: string; adminToken?: string; isServerHost: boolean } | undefined
   >(undefined)
@@ -47,6 +49,14 @@ export const App = () => {
     }, [])
   }
 
+  const wsUrl = params.get('ws')
+  if (wsUrl) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEffect(() => {
+      joinGame(wsUrl, params.get('adminToken') ?? undefined) // just a hack to show the url in the UI while connecting
+    }, [])
+  }
+
   if (params.get('spectate') === 'true') {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     useEffect(() => {
@@ -66,17 +76,18 @@ export const App = () => {
     }
 
     const server = await createServer({
-      peerId: serverPeerId,
+      serverPeerId,
+      serverWebSocketPort: -1, // not used in browser
       cardsPerPlayer: 5,
     })
     setServer({ ...server, isServerHost: true })
     return server
   }
 
-  function joinGame(serverPeerId: string) {
+  function joinGame(serverPeerId: string, adminToken?: string) {
     setServer({
       peerId: serverPeerId,
-      adminToken: undefined,
+      adminToken,
       isServerHost: false,
     })
     window.location.hash = serverPeerId

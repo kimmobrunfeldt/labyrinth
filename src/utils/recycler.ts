@@ -64,9 +64,9 @@ export async function createRecycler<T>({
         break
       } catch (err) {
         logger.warn('Recycler failed to re-create', err)
+      } finally {
+        await sleep(retryInterval)
       }
-
-      await sleep(retryInterval)
     }
   }
 
