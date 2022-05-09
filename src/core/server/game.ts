@@ -30,7 +30,6 @@ export type GameControl = ReturnType<typeof createGame>
 
 export function createGame(opts: CreateGameOptions) {
   const onStateChange = opts.onStateChange ?? (() => undefined)
-  const cardsPerPlayer = opts.cardsPerPlayer ?? 5
 
   // Note: Many other functions rely on object reference pointers.
   //       It is safe to do the shuffle before game starts, but after
