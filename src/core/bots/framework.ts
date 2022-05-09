@@ -16,11 +16,11 @@ export type BotImplementation = {
      */
     getState: () => t.ClientGameState
   ) => Promise<void>
-  onJoin?: t.PromisifyMethods<t.ClientRpcAPI>['onJoin']
-  onStateChange?: t.PromisifyMethods<t.ClientRpcAPI>['onStateChange']
-  onPushPositionHover?: t.PromisifyMethods<t.ClientRpcAPI>['onPushPositionHover']
-  onMessage?: t.PromisifyMethods<t.ClientRpcAPI>['onMessage']
-  onServerReject?: t.PromisifyMethods<t.ClientRpcAPI>['onServerReject']
+  onJoin?: t.RpcProxyWithNotify<t.ClientRpcAPI>['onJoin']
+  onStateChange?: t.RpcProxyWithNotify<t.ClientRpcAPI>['onStateChange']
+  onPushPositionHover?: t.RpcProxyWithNotify<t.ClientRpcAPI>['onPushPositionHover']
+  onMessage?: t.RpcProxyWithNotify<t.ClientRpcAPI>['onMessage']
+  onServerReject?: t.RpcProxyWithNotify<t.ClientRpcAPI>['onServerReject']
 }
 
 const params = new URLSearchParams(window.location.search)

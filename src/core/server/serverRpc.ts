@@ -1,38 +1,63 @@
-import MoleServer from 'mole-rpc/MoleServer'
-import Peer from 'peerjs'
 import { GameControl } from 'src/core/server/game'
 import * as t from 'src/gameTypes'
-import { getLogger, Logger } from 'src/utils/logger'
-import { PeerJsTransportServer } from 'src/utils/TransportServer'
-import {
-  getPlayerLabel,
-  wrapAdminMethods,
-  wrapWithLogging,
-} from 'src/utils/utils'
+import { Logger } from 'src/utils/logger'
+import { getPlayerLabel, wrapAdminMethods } from 'src/utils/utils'
 
-export function startServerRpcForClient({
+export function createServerRpc({
   logger,
-  connection,
   adminToken,
   game,
   playerId,
-  mutableServerState,
+  serverState,
   serverMethods,
 }: {
   playerId: string
-  connection: Peer.DataConnection
   logger: Logger
   adminToken: string
   game: GameControl
-  mutableServerState: t.ServerState
+  serverState: t.ServerState
   serverMethods: t.ServerMethods
-}) {
-  const server = new MoleServer({
-    transports: [],
-  })
-  const serverRpc: t.PromisifyMethods<t.ServerRpcAPI> = {
+}): t.RpcProxy<t.ServerRpcAPI> {
+  const adminRpc = {
+    start: serverMethods.start,
+    restart: serverMethods.restart,
+    spectate: () => serverMethods.makeSpectator(playerId),
+    promote: async () => game.promotePlayer(playerId),
+    shuffleBoard: async (level?: t.ShuffleLevel) => {
+      game.shuffleBoard(level)
+    },
+    changeSettings: async (settings: Partial<t.GameSettings>) => {
+      game.changeSettings(settings)
+    },
+    removePlayer: async (id: t.Player['id']) => {
+      const player = game.getPlayerById(id)
+      logger.log(`Player '${getPlayerLabel(player)}' will be kicked`)
+
+      if (id in serverState.players) {
+        serverState.players[id].status = 'toBeKicked'
+        // The clients will very aggressively reconnect, unless we explicitly
+        // tell them that they are not welcome
+        await serverState.players[id].clientRpc.onServerReject(
+          'host kicked you out'
+        )
+        serverState.players[id].connection.disconnect()
+        delete serverState.players[id]
+      }
+
+      game.removePlayer(id)
+      serverMethods.sendMessage(
+        `${getPlayerLabel(player)} disconnected (kicked)`
+      )
+    },
+  }
+
+  return {
+    // Methods that require admin token
+    ...wrapAdminMethods(adminRpc, adminToken),
+
+    // Regular methods
     getState: async () =>
-      getStateForPlayer(game, mutableServerState.players, playerId),
+      getStateForPlayer(game, serverState.players, playerId),
     getMyPosition: async () => game.getPlayerPosition(playerId),
     getMyCurrentCards: async () => game.getPlayersCurrentCards(playerId),
     setExtraPieceRotation: async (rotation: t.Rotation) =>
@@ -55,9 +80,9 @@ export function startServerRpcForClient({
           return
         }
 
-        mutableServerState.players[
-          pId as keyof typeof mutableServerState.players
-        ].client.onPushPositionHover(position)
+        serverState.players[
+          pId as keyof typeof serverState.players
+        ].clientRpc.onPushPositionHover(position)
       })
     },
     sendMessage: async (message: string) => {
@@ -65,57 +90,16 @@ export function startServerRpcForClient({
 
       // Forward the information directly to all other clients
       Object.keys(serverMethods.getConnectedPlayers()).forEach((pId) => {
-        mutableServerState.players[
-          pId as keyof typeof mutableServerState.players
-        ].client.onMessage(`${player.name} says: ${message}`)
+        serverState.players[
+          pId as keyof typeof serverState.players
+        ].clientRpc.onMessage(`${player.name} says: ${message}`)
       })
     },
     setMyName: async (name: string) => game.setNameByPlayer(playerId, name),
     move: async (moveTo: t.Position) => game.moveByPlayer(playerId, moveTo),
     push: async (pushPos: t.PushPosition) =>
       game.pushByPlayer(playerId, pushPos),
-    ...wrapAdminMethods(
-      {
-        start: serverMethods.start,
-        restart: serverMethods.restart,
-        spectate: () => serverMethods.makeSpectator(playerId),
-        promote: async () => game.promotePlayer(playerId),
-        shuffleBoard: async (level?: t.ShuffleLevel) => {
-          game.shuffleBoard(level)
-        },
-        removePlayer: async (id: t.Player['id']) => {
-          const player = game.getPlayerById(id)
-          logger.log(`Player '${getPlayerLabel(player)}' will be kicked`)
-
-          if (id in mutableServerState.players) {
-            mutableServerState.players[id].status = 'toBeKicked'
-            await mutableServerState.players[id].client.onServerReject(
-              'host kicked you out'
-            )
-            mutableServerState.players[id].connection.close()
-            delete mutableServerState.players[id]
-          }
-
-          game.removePlayer(id)
-          serverMethods.sendMessage(
-            `${getPlayerLabel(player)} disconnected (kicked)`
-          )
-        },
-        changeSettings: async (settings: Partial<t.GameSettings>) => {
-          game.changeSettings(settings)
-        },
-      },
-      adminToken
-    ),
   }
-  const rpcLogger = getLogger(`SERVER RPC (${playerId}):`)
-  server.expose(wrapWithLogging(rpcLogger, serverRpc))
-  server.registerTransport(
-    new PeerJsTransportServer({
-      peerConnection: connection,
-    })
-  )
-  return server
 }
 
 export function getStateForPlayer(
@@ -127,44 +111,17 @@ export function getStateForPlayer(
     return getStateForSpectator(game, serverPlayers, playerId)
   }
 
-  function censorPlayer({
-    cards: playerCards,
-    ...p
-  }: t.Player): t.CensoredPlayer {
-    return {
-      ...p,
-      censoredCards: playerCards.map(
-        (c): t.CensoredCard =>
-          c.found ? { found: true, trophy: c.trophy } : { found: false }
-      ),
-      currentCards: game.getPlayersCurrentCards(p.id),
-    }
-  }
-
   const { cards: _allGameCards, board, ...state } = game.getState()
   return {
     ...state,
-    board: {
-      pieces: board.pieces.map((row) =>
-        row.map((p) => {
-          if (!p) {
-            return p
-          }
-          const { players, ...rest } = p
-          return {
-            ...rest,
-            players: players.map(censorPlayer),
-          }
-        })
-      ),
-    },
+    board: censorBoard(game, board),
     players: state.players.map((p) => ({
-      ...censorPlayer(p),
+      ...censorPlayer(game, p),
       status: (serverPlayers[p.id].status === 'toBeKicked'
         ? 'disconnected'
         : serverPlayers[p.id].status) as t.PlayerConnectionStatus,
     })),
-    me: censorPlayer(game.getPlayerById(playerId)),
+    me: censorPlayer(game, game.getPlayerById(playerId)),
     myCurrentCards: game.getPlayersCurrentCards(playerId),
     myPosition:
       game.getState().stage === 'setup'
@@ -182,46 +139,17 @@ export function getStateForSpectator(
   const playerInTurn: t.Player | undefined =
     gameState.players[gameState.playerTurn]
 
-  function censorPlayer({
-    cards: playerCards,
-    ...p
-  }: t.Player): t.CensoredPlayer {
-    return {
-      ...p,
-      censoredCards: playerCards.map(
-        (c): t.CensoredCard =>
-          c.found ? { found: true, trophy: c.trophy } : { found: false }
-      ),
-      currentCards: playerInTurn
-        ? game.getPlayersCurrentCards(playerInTurn.id)
-        : [],
-    }
-  }
-
   const { cards: _allGameCards, board, ...state } = game.getState()
   return {
     ...state,
-    board: {
-      pieces: board.pieces.map((row) =>
-        row.map((p) => {
-          if (!p) {
-            return p
-          }
-          const { players, ...rest } = p
-          return {
-            ...rest,
-            players: players.map(censorPlayer),
-          }
-        })
-      ),
-    },
+    board: censorBoard(game, board),
     players: state.players.map((p) => ({
-      ...censorPlayer(p),
+      ...censorPlayer(game, p),
       status: (serverPlayers[p.id].status === 'toBeKicked'
         ? 'disconnected'
         : serverPlayers[p.id].status) as t.PlayerConnectionStatus,
     })),
-    me: censorPlayer({
+    me: censorPlayer(game, {
       id: playerId,
       name: 'Spectator',
       originalName: 'Spectator',
@@ -235,5 +163,39 @@ export function getStateForSpectator(
       game.getState().stage === 'setup'
         ? undefined
         : game.getPlayerPosition(playerInTurn.id),
+  }
+}
+
+function censorBoard(
+  game: GameControl,
+  board: t.Board
+): t.ClientGameState['board'] {
+  return {
+    pieces: board.pieces.map((row) =>
+      row.map((p) => {
+        if (!p) {
+          return p
+        }
+        const { players, ...rest } = p
+        return {
+          ...rest,
+          players: players.map((player) => censorPlayer(game, player)),
+        }
+      })
+    ),
+  }
+}
+
+function censorPlayer(
+  game: GameControl,
+  { cards: playerCards, ...p }: t.Player
+): t.CensoredPlayer {
+  return {
+    ...p,
+    censoredCards: playerCards.map(
+      (c): t.CensoredCard =>
+        c.found ? { found: true, trophy: c.trophy } : { found: false }
+    ),
+    currentCards: game.getPlayersCurrentCards(p.id),
   }
 }

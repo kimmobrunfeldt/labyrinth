@@ -1,6 +1,6 @@
-import Peer from 'peerjs'
-
 // Server
+
+import { Connection } from 'src/core/server/networking'
 
 export type ServerMethods = {
   start: () => Promise<void>
@@ -15,8 +15,8 @@ export type ServerState = {
 }
 export type ServerPlayer = {
   id: string
-  client: RpcProxy<ClientRpcAPI>
-  connection: Peer.DataConnection
+  clientRpc: RpcProxyWithNotify<ClientRpcAPI>
+  connection: Connection
   status: InternalPlayerConnectionStatus
   spectator: boolean
 }
@@ -33,11 +33,6 @@ export type InternalPlayerConnectionStatus =
 export type PlayerConnectionStatus = 'connected' | 'disconnected'
 
 // Game control loop
-
-export type PlayerUI = {
-  askForPush: () => Promise<{ position: PushPosition; rotation: Rotation }>
-  askForMove: () => Promise<Position>
-}
 
 export type ServerRpcAPI = {
   getState: () => ClientGameState
@@ -239,8 +234,12 @@ export type RequiredBy<
   K extends keyof T
 > = Omit<T, K> & Pick<Required<T>, K>
 
+export type RpcProxyWithNotify<
+  T extends { [key: string]: (...args: any[]) => any }
+> = PromisifyMethods<T> & { notify: PromisifyMethods<T> }
+
 export type RpcProxy<T extends { [key: string]: (...args: any[]) => any }> =
-  PromisifyMethods<T> & { notify: PromisifyMethods<T> }
+  PromisifyMethods<T>
 
 export type PromisifyMethods<
   T extends { [key: string]: (...args: any[]) => any }
