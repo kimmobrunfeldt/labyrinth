@@ -9,6 +9,16 @@ export function getLogger(label: string) {
   }
 }
 
+export function prefixLogger(logger: Logger, prefix: string) {
+  return {
+    debug: (...args: unknown[]) => logger.debug(prefix, ...args),
+    info: (...args: unknown[]) => logger.info(prefix, ...args),
+    log: (...args: unknown[]) => logger.log(prefix, ...args),
+    warn: (...args: unknown[]) => logger.warn(prefix, ...args),
+    error: (...args: unknown[]) => logger.error(prefix, ...args),
+  }
+}
+
 /**
  * Helps following the log messages for the host who might run many concurrent
  * clients along the server. Ultimately these would be the same colors as the

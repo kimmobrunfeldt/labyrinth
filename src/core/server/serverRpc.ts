@@ -1,4 +1,4 @@
-import { GameControl } from 'src/core/server/game'
+import { GameControl, getCurrentCards } from 'src/core/server/game'
 import * as t from 'src/gameTypes'
 import { Logger } from 'src/utils/logger'
 import { getPlayerLabel, wrapAdminMethods } from 'src/utils/utils'
@@ -196,6 +196,6 @@ function censorPlayer(
       (c): t.CensoredCard =>
         c.found ? { found: true, trophy: c.trophy } : { found: false }
     ),
-    currentCards: game.getPlayersCurrentCards(p.id),
+    currentCards: getCurrentCards(playerCards),
   }
 }

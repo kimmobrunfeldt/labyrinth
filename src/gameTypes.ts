@@ -1,6 +1,6 @@
 // Server
 
-import { Connection } from 'src/core/server/networking'
+import { Connection } from 'src/core/server/networking/utils'
 
 export type ServerMethods = {
   start: () => Promise<void>

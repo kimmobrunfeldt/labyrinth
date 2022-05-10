@@ -1,15 +1,21 @@
+import _ from 'lodash'
 import MoleClient from 'mole-rpc/MoleClientProxified'
 import MoleServer from 'mole-rpc/MoleServer'
 import X from 'mole-rpc/X'
 import Peer from 'peerjs'
 import retryify from 'promise-retryify'
-import { SERVER_TOWARDS_CLIENT_TIMEOUT_SECONDS } from 'src/core/server/networking'
+import { CLIENT_TOWARDS_SERVER_TIMEOUT_SECONDS } from 'src/core/server/networking/utils'
 import * as t from 'src/gameTypes'
 import { debugLevel, iceServers } from 'src/peerConfig'
-import { getLogger, getUniqueEmoji, Logger } from 'src/utils/logger'
+import {
+  getLogger,
+  getUniqueEmoji,
+  Logger,
+  prefixLogger,
+} from 'src/utils/logger'
+import { PeerJsTransportClient } from 'src/utils/mole-rpc/PeerJsTransportClient'
+import { PeerJsTransportServer } from 'src/utils/mole-rpc/PeerJsTransportServer'
 import { createRecycler, Recycler } from 'src/utils/recycler'
-import { PeerJsTransportClient } from 'src/utils/TransportClient'
-import { PeerJsTransportServer } from 'src/utils/TransportServer'
 import { waitForEvent, wrapWithLogging } from 'src/utils/utils'
 
 export type ClientOptions = {
@@ -137,26 +143,24 @@ function createRpc(
     onPushPositionHover: opts.onPushPositionHover ?? (async () => undefined),
     onServerReject: opts.onServerReject ?? (async () => undefined),
   }
-  clientServer.expose(wrapWithLogging(opts.rpcLogger, clientRpc))
+  const incomingLogger = prefixLogger(opts.rpcLogger, '<-')
+  clientServer.expose(wrapWithLogging(incomingLogger, clientRpc))
   clientServer.registerTransport(
     new PeerJsTransportServer({ peerConnection: conn })
   )
 
   const client: t.RpcProxyWithNotify<t.ServerRpcAPI> = new MoleClient({
-    // This is required to be lower than the server's timeout towards clients.
-    // Think of this scenario:
-    // * You send "kick player 2" to server (5s timeout)
-    // * Server sends "server is full, get out" to player 2 (10s timeout)
-    // * Player 2 disconnects without responding
-    // * ... server keeps waiting
-    // * Your client times out before server responds to you -> recycle of your client
-    requestTimeout: (SERVER_TOWARDS_CLIENT_TIMEOUT_SECONDS - 2) * 1000,
+    requestTimeout: CLIENT_TOWARDS_SERVER_TIMEOUT_SECONDS * 1000,
     transport: new PeerJsTransportClient({
       peerConnection: conn,
     }),
   })
+  const outgoingLogger = prefixLogger(opts.rpcLogger, '->')
   // Re-create the proxified functions for retryify to work
-  const clientObj: Omit<t.RpcProxyWithNotify<t.ServerRpcAPI>, 'notify'> = {
+  const clientObj: Omit<
+    t.RpcProxyWithNotify<t.ServerRpcAPI>,
+    'notify'
+  > = wrapWithLogging(outgoingLogger, {
     getState: (...args) => client.getState(...args),
     getMyPosition: (...args) => client.getMyPosition(...args),
     getMyCurrentCards: (...args) => client.getMyCurrentCards(...args),
@@ -173,12 +177,12 @@ function createRpc(
     shuffleBoard: (...args) => client.shuffleBoard(...args),
     removePlayer: (...args) => client.removePlayer(...args),
     changeSettings: (...args) => client.changeSettings(...args),
-  }
+  })
 
-  const retryClient = retryify(clientObj, {
+  const retryOptions: Parameters<typeof retryify>[1] = {
     // 3s, 6s
     retryTimeout: (retryCount) => (retryCount + 1) * 3000,
-    maxRetries: 0,
+    maxRetries: 1,
     shouldRetry: (err) => {
       return err instanceof X.RequestTimeout
     },
@@ -192,9 +196,17 @@ function createRpc(
         conn.close()
       }
     },
-  })
+  }
+  const retryClient = retryify(clientObj, retryOptions)
+  const notifyObj = wrapWithLogging(
+    outgoingLogger,
+    _.mapValues(clientObj, (val, key) => {
+      return client.notify[key as keyof typeof client.notify]
+    })
+  ) as t.RpcProxy<t.ServerRpcAPI>
 
-  const anyClient = retryClient as t.RpcProxyWithNotify<t.ServerRpcAPI>
-  anyClient.notify = retryClient
-  return anyClient
+  return {
+    ...retryClient,
+    notify: retryify(notifyObj, retryOptions),
+  }
 }

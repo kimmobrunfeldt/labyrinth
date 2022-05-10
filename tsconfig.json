@@ -1,4 +1,10 @@
 {
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs",
+      "target": "ES2018"
+    }
+  },
   "compilerOptions": {
     "target": "es2016",
     "lib": [

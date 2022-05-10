@@ -9,7 +9,12 @@ import { NextTrophy } from 'src/components/NextTrophy'
 import { VisibilityToggle } from 'src/components/VisibilityToggle'
 import { BotId } from 'src/core/bots/availableBots'
 import { connectBot } from 'src/core/bots/framework'
-import { Client, createClient } from 'src/core/client'
+import {
+  Client,
+  ClientOptions,
+  createClient as createPeerJsClient,
+} from 'src/core/client/peerjsClient'
+import { createClient as createWebSocketClient } from 'src/core/client/webSocketClient'
 import { getNewRotation } from 'src/core/server/board'
 import * as t from 'src/gameTypes'
 import { ClientGameState } from 'src/gameTypes'
@@ -27,7 +32,9 @@ import { zIndices } from 'src/zIndices'
 type Props = {
   serverPeerId: string
   adminToken?: string
-  onClientCreated: (client: Client) => void
+  spectate?: boolean
+  wsUrl?: string
+  onClientCreated: (client: Pick<Client, 'serverRpc'>) => void
 }
 
 function Container({ children }: { children: React.ReactNode }) {
@@ -48,10 +55,11 @@ function Container({ children }: { children: React.ReactNode }) {
 }
 
 export const GameClient = (props: Props) => {
-  const { serverPeerId, adminToken } = props
+  const { serverPeerId, adminToken, spectate } = props
   const [error, setError] = useState<Error | undefined>(undefined)
   const [client, setClient] = useState<
-    Awaited<ReturnType<typeof createClient>> | undefined
+    | Pick<Awaited<ReturnType<typeof createPeerJsClient>>, 'serverRpc'>
+    | undefined
   >(undefined)
   const [gameState, setGameState] = useState<ClientGameState | undefined>(
     undefined
@@ -61,7 +69,13 @@ export const GameClient = (props: Props) => {
   >(undefined)
   const [messages, setMessages] = useState<Message[]>(
     adminToken
-      ? [createMessage('You are the host. Game server runs on your browser.')]
+      ? [
+          createMessage(
+            props.wsUrl
+              ? 'Connected to a WebSocket server.'
+              : 'You are the host. Game server runs on your browser.'
+          ),
+        ]
       : []
   )
   const [playerLabelsVisible, setPlayerLabelsVisible] = useState(
@@ -78,30 +92,28 @@ export const GameClient = (props: Props) => {
       }
 
       const logEmoji = getUniqueEmoji()
-      const client = await createClient({
+
+      const clientCommonProps: Omit<
+        ClientOptions,
+        | 'serverPeerId'
+        | 'onPeerError'
+        | 'onPeerConnectionClose'
+        | 'onPeerConnectionOpen'
+        | 'onPeerConnectionError'
+      > = {
         playerId,
         logger: getLogger(`${logEmoji} CLIENT:`), // eslint-disable-line no-irregular-whitespace
         rpcLogger: getLogger(`${logEmoji} CLIENT RPC:`), // eslint-disable-line no-irregular-whitespace
-        serverPeerId,
-        onJoin: async (state) => {
+        onJoin: async (state: t.ClientGameState) => {
           setGameState(state)
 
-          if (adminToken) {
+          if (adminToken && state.stage === 'setup') {
             await client.serverRpc.promote(adminToken)
           }
-        },
-        onPeerError: (err) => {
-          setError(err)
-        },
-        onPeerConnectionClose: () => {
-          // setError(new Error('Game server disconnected'))
-        },
-        onPeerConnectionOpen: () => {
-          setError(undefined)
-        },
-        onPeerConnectionError: (err) => {
-          console.error(err)
-          setError(err)
+
+          if (adminToken && spectate && state.stage === 'setup') {
+            await client.serverRpc.spectate(adminToken)
+          }
         },
         onStateChange: async (state) => {
           setError(undefined)
@@ -120,7 +132,37 @@ export const GameClient = (props: Props) => {
         onMessage: async (msg, opts) => {
           onMessage(msg, opts)
         },
-      })
+      }
+
+      const client = props.wsUrl
+        ? await createWebSocketClient({
+            ...clientCommonProps,
+            wsUrl: props.wsUrl,
+            onWebSocketError: (err) => {
+              console.error(err)
+              setError(err)
+            },
+            onWebSocketOpen: () => {
+              setError(undefined)
+            },
+          })
+        : await createPeerJsClient({
+            ...clientCommonProps,
+            serverPeerId,
+            onPeerError: (err) => {
+              setError(err)
+            },
+            onPeerConnectionClose: () => {
+              // setError(new Error('Game server disconnected'))
+            },
+            onPeerConnectionOpen: () => {
+              setError(undefined)
+            },
+            onPeerConnectionError: (err) => {
+              console.error(err)
+              setError(err)
+            },
+          })
 
       props.onClientCreated(client)
       setClient(client)
@@ -153,7 +195,7 @@ export const GameClient = (props: Props) => {
   }
 
   async function onAddBot(botId: BotId) {
-    await connectBot(botId, `bot-${uuid()}`, serverPeerId)
+    await connectBot(botId, `bot-${uuid()}`, serverPeerId, props.wsUrl)
   }
 
   async function onRemovePlayer(id: t.Player['id']) {
@@ -268,9 +310,10 @@ export const GameClient = (props: Props) => {
   }
 
   if (!gameState) {
-    const message = adminToken
-      ? 'Starting the server ...'
-      : `Connecting to ${serverPeerId} ...`
+    const message =
+      adminToken && !props.wsUrl
+        ? 'Starting the server ...'
+        : `Connecting to ${serverPeerId} ...`
     return (
       <Container {...containerProps}>
         <div style={{ padding: '20px' }}>{message}</div>

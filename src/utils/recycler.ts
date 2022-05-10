@@ -64,9 +64,9 @@ export async function createRecycler<T>({
         break
       } catch (err) {
         logger.warn('Recycler failed to re-create', err)
+      } finally {
+        await sleep(retryInterval)
       }
-
-      await sleep(retryInterval)
     }
   }
 
@@ -81,11 +81,12 @@ export async function createRecycler<T>({
     if (autoRecycle) {
       autoRecycle(
         obj,
-        _.once(() => {
+        _.once(async () => {
           if (stopRecycle) {
             return
           }
 
+          await sleep(retryInterval)
           void recycle()
         })
       )
