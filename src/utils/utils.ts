@@ -32,7 +32,6 @@ export function getPlayerLabel(player?: t.Player | t.CensoredPlayer): string {
   return `${player?.name ?? 'Spectator'}`
 }
 
-// TODO: implement turn skip on timeout
 export async function loopUntilSuccess<ArgsT>(
   fn: () => Promise<void>,
   optsIn: {
