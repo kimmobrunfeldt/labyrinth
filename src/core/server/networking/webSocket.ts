@@ -58,6 +58,13 @@ async function _createServerNetworking(
       opts.logger.info('Initial metadata received', metadata.toString())
       clearTimeout(timer)
       onConnectionOpen(JSON.parse(metadata.toString()))
+
+      ws.on('close', () =>
+        opts.logger.info(
+          'Client WebSocket connection closed',
+          metadata.toString()
+        )
+      )
     })
 
     async function onConnectionOpen(meta: ConnectionMetadata) {
@@ -97,7 +104,9 @@ async function _createServerNetworking(
         transports: [],
       })
       const rpcLogger = getLogger(`SERVER RPC (${meta.playerId}):`)
-      server.expose(wrapWithLogging(rpcLogger, serverRpc))
+      server.expose(
+        wrapWithLogging(rpcLogger, wrapWithErrorIgnoring(rpcLogger, serverRpc))
+      )
       server.registerTransport(
         new WebSocketTransportServer({
           ws,

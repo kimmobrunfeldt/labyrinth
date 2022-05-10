@@ -107,13 +107,11 @@ export const GameClient = (props: Props) => {
         onJoin: async (state: t.ClientGameState) => {
           setGameState(state)
 
-          if (adminToken) {
-            console.log('promote')
+          if (adminToken && state.stage === 'setup') {
             await client.serverRpc.promote(adminToken)
           }
 
-          if (adminToken && spectate) {
-            console.log('spectate')
+          if (adminToken && spectate && state.stage === 'setup') {
             await client.serverRpc.spectate(adminToken)
           }
         },
@@ -197,7 +195,7 @@ export const GameClient = (props: Props) => {
   }
 
   async function onAddBot(botId: BotId) {
-    await connectBot(botId, `bot-${uuid()}`, serverPeerId)
+    await connectBot(botId, `bot-${uuid()}`, serverPeerId, props.wsUrl)
   }
 
   async function onRemovePlayer(id: t.Player['id']) {
@@ -312,9 +310,10 @@ export const GameClient = (props: Props) => {
   }
 
   if (!gameState) {
-    const message = adminToken
-      ? 'Starting the server ...'
-      : `Connecting to ${serverPeerId} ...`
+    const message =
+      adminToken && !props.wsUrl
+        ? 'Starting the server ...'
+        : `Connecting to ${serverPeerId} ...`
     return (
       <Container {...containerProps}>
         <div style={{ padding: '20px' }}>{message}</div>

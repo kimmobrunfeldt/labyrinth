@@ -7,7 +7,12 @@ import retryify from 'promise-retryify'
 import { CLIENT_TOWARDS_SERVER_TIMEOUT_SECONDS } from 'src/core/server/networking/utils'
 import * as t from 'src/gameTypes'
 import { debugLevel, iceServers } from 'src/peerConfig'
-import { getLogger, getUniqueEmoji, Logger } from 'src/utils/logger'
+import {
+  getLogger,
+  getUniqueEmoji,
+  Logger,
+  prefixLogger,
+} from 'src/utils/logger'
 import { PeerJsTransportClient } from 'src/utils/mole-rpc/PeerJsTransportClient'
 import { PeerJsTransportServer } from 'src/utils/mole-rpc/PeerJsTransportServer'
 import { createRecycler, Recycler } from 'src/utils/recycler'
@@ -138,7 +143,8 @@ function createRpc(
     onPushPositionHover: opts.onPushPositionHover ?? (async () => undefined),
     onServerReject: opts.onServerReject ?? (async () => undefined),
   }
-  clientServer.expose(wrapWithLogging(opts.rpcLogger, clientRpc))
+  const incomingLogger = prefixLogger(opts.rpcLogger, '<-')
+  clientServer.expose(wrapWithLogging(incomingLogger, clientRpc))
   clientServer.registerTransport(
     new PeerJsTransportServer({ peerConnection: conn })
   )
@@ -149,8 +155,12 @@ function createRpc(
       peerConnection: conn,
     }),
   })
+  const outgoingLogger = prefixLogger(opts.rpcLogger, '->')
   // Re-create the proxified functions for retryify to work
-  const clientObj: Omit<t.RpcProxyWithNotify<t.ServerRpcAPI>, 'notify'> = {
+  const clientObj: Omit<
+    t.RpcProxyWithNotify<t.ServerRpcAPI>,
+    'notify'
+  > = wrapWithLogging(outgoingLogger, {
     getState: (...args) => client.getState(...args),
     getMyPosition: (...args) => client.getMyPosition(...args),
     getMyCurrentCards: (...args) => client.getMyCurrentCards(...args),
@@ -167,12 +177,12 @@ function createRpc(
     shuffleBoard: (...args) => client.shuffleBoard(...args),
     removePlayer: (...args) => client.removePlayer(...args),
     changeSettings: (...args) => client.changeSettings(...args),
-  }
+  })
 
   const retryOptions: Parameters<typeof retryify>[1] = {
     // 3s, 6s
     retryTimeout: (retryCount) => (retryCount + 1) * 3000,
-    maxRetries: 0,
+    maxRetries: 1,
     shouldRetry: (err) => {
       return err instanceof X.RequestTimeout
     },
@@ -188,9 +198,12 @@ function createRpc(
     },
   }
   const retryClient = retryify(clientObj, retryOptions)
-  const notifyObj = _.mapValues(clientObj, (val, key) => {
-    return client.notify[key as keyof typeof client.notify]
-  }) as t.RpcProxy<t.ServerRpcAPI>
+  const notifyObj = wrapWithLogging(
+    outgoingLogger,
+    _.mapValues(clientObj, (val, key) => {
+      return client.notify[key as keyof typeof client.notify]
+    })
+  ) as t.RpcProxy<t.ServerRpcAPI>
 
   return {
     ...retryClient,

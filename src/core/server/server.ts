@@ -8,7 +8,12 @@ import {
 import { createServerRpc, getStateForPlayer } from 'src/core/server/serverRpc'
 import * as t from 'src/gameTypes'
 import { getLogger } from 'src/utils/logger'
-import { getPlayerLabel, getRandomAdminToken, sleep } from 'src/utils/utils'
+import {
+  getPlayerLabel,
+  getRandomAdminToken,
+  sleep,
+  wrapWithErrorIgnoring,
+} from 'src/utils/utils'
 
 const logger = getLogger('📓 SERVER:')
 
@@ -47,8 +52,10 @@ export async function createServer(
     logger,
     serverPeerId,
     serverWebSocketPort,
-    onClientConnect: handleClientConnect,
-    onClientDisconnect: handleClientDisconnect,
+    ...wrapWithErrorIgnoring(logger, {
+      onClientConnect: handleClientConnect,
+      onClientDisconnect: handleClientDisconnect,
+    }),
   })
 
   return {

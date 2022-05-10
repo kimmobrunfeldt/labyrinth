@@ -3,8 +3,8 @@ import {
   BotCreateOptions,
   BotImplementation,
   BOT_THINKING_DELAY,
+  Client,
 } from 'src/core/bots/framework'
-import { Client } from 'src/core/client/peerjsClient'
 import {
   assertDefined,
   BOARD_PUSH_POSITIONS,

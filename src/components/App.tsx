@@ -28,6 +28,7 @@ export const App = () => {
 
   useEffect(() => {
     async function init() {
+      const wsUrl = params.get('ws') ?? undefined
       const botsStr = params.get('bots') ?? ''
       const bots = botsStr
         .split(',')
@@ -38,13 +39,12 @@ export const App = () => {
         const s = await hostGame()
 
         for (const id of bots) {
-          await connectBot(id as BotId, `bot-${uuid()}`, s.peerId)
+          await connectBot(id as BotId, `bot-${uuid()}`, s.peerId, wsUrl)
         }
 
         return
       }
 
-      const wsUrl = params.get('ws')
       if (wsUrl) {
         setServer({
           peerId: wsUrl, // Hack to show websocket url at the top of the UI

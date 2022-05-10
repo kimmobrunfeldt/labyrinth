@@ -1,6 +1,14 @@
 import _ from 'lodash'
 import { availableBots, BotId } from 'src/core/bots/availableBots'
-import { Client, createClient } from 'src/core/client/peerjsClient'
+import {
+  Client as PeerJsClient,
+  ClientOptions,
+  createClient as createPeerJsClient,
+} from 'src/core/client/peerjsClient'
+import {
+  Client as WebSocketClient,
+  createClient as createWebSocketClient,
+} from 'src/core/client/webSocketClient'
 import * as t from 'src/gameTypes'
 import { getLogger, getUniqueEmoji, Logger } from 'src/utils/logger'
 
@@ -8,6 +16,8 @@ export type BotCreateOptions = {
   logger: Logger
   client: Client
 }
+
+export type Client = PeerJsClient | WebSocketClient
 
 export type BotImplementation = {
   onMyTurn: (
@@ -33,7 +43,8 @@ export const BOT_THINKING_DELAY = _.isFinite(parsed) ? parsed : 5000
 export async function connectBot(
   botId: BotId,
   playerId: string,
-  serverPeerId: string
+  serverPeerId: string,
+  wsUrl?: string
 ) {
   const botImplementation = availableBots[botId]
   if (!botImplementation) {
@@ -45,12 +56,18 @@ export async function connectBot(
   const emoji = getUniqueEmoji()
   const logger = getLogger(`${emoji} BOT (${botId}):`) // eslint-disable-line no-irregular-whitespace
 
-  const client = await createClient({
+  const clientCommonProps: Omit<
+    ClientOptions,
+    | 'serverPeerId'
+    | 'onPeerError'
+    | 'onPeerConnectionClose'
+    | 'onPeerConnectionOpen'
+    | 'onPeerConnectionError'
+  > = {
     playerId,
     playerName: botImplementation.name,
     logger,
     rpcLogger: getLogger(`${emoji} BOT RPC (${botId}):`), // eslint-disable-line no-irregular-whitespace
-    serverPeerId: serverPeerId,
     onJoin: async (state) => {
       logger.log('Joined server')
       gameState = state
@@ -100,7 +117,18 @@ export async function connectBot(
         await bot.onServerReject(message)
       }
     },
-  })
+  }
+
+  const client = wsUrl
+    ? await createWebSocketClient({
+        ...clientCommonProps,
+        wsUrl,
+      })
+    : await createPeerJsClient({
+        ...clientCommonProps,
+        serverPeerId: serverPeerId,
+      })
+
   const bot = await botImplementation.create({ logger, client })
 
   return client
