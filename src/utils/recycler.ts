@@ -81,11 +81,12 @@ export async function createRecycler<T>({
     if (autoRecycle) {
       autoRecycle(
         obj,
-        _.once(() => {
+        _.once(async () => {
           if (stopRecycle) {
             return
           }
 
+          await sleep(retryInterval)
           void recycle()
         })
       )

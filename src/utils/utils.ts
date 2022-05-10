@@ -97,14 +97,36 @@ export function wrapWithLogging<
   T extends { [key: string]: (...args: any[]) => any }
 >(logger: Logger, methods: T): T {
   return _.mapValues(methods, (fn, key) => {
+    if (!_.isFunction(fn)) {
+      return fn
+    }
+
     return async (...args: unknown[]) => {
       logger.log(`${key} called with ${args.length} arguments:\n`, args)
 
       try {
         return await fn(...args)
       } catch (e) {
-        console.error(e)
+        logger.error(e)
         throw e
+      }
+    }
+  }) as T
+}
+
+export function wrapWithErrorIgnoring<
+  T extends { [key: string]: (...args: any[]) => any }
+>(logger: Logger, methods: T): T {
+  return _.mapValues(methods, (fn, key) => {
+    if (!_.isFunction(fn)) {
+      return fn
+    }
+
+    return async (...args: unknown[]) => {
+      try {
+        return await fn(...args)
+      } catch (e) {
+        logger.info('Ignored error', e)
       }
     }
   }) as T
@@ -119,6 +141,10 @@ export function wrapAdminMethods<
   [K in keyof T]: (token: string, ...args: Parameters<T[K]>) => ReturnType<T[K]>
 } {
   return _.mapValues(methods, (fn) => {
+    if (!_.isFunction(fn)) {
+      return fn
+    }
+
     return (token: string, ...args: any[]) => {
       if (token !== serverAdminToken) {
         throw new Error('Admin command not authorized')

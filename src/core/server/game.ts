@@ -478,10 +478,14 @@ export function getPlayersBetweenCurrentAndPlayerWhoStarted(
  * the data so it would allow finding multiple cards at a time.
  */
 function getPlayersCurrentCards(player: t.Player, max = 1): t.Card[] {
+  return getCurrentCards(player.cards, max)
+}
+
+export function getCurrentCards(playerCards: t.Card[], max = 1): t.Card[] {
   const current: t.Card[] = []
-  for (let i = 0; i < player.cards.length; ++i) {
-    if (!player.cards[i].found) {
-      current.push(player.cards[i])
+  for (let i = 0; i < playerCards.length; ++i) {
+    if (!playerCards[i].found) {
+      current.push(playerCards[i])
       if (current.length >= max) {
         return current
       }

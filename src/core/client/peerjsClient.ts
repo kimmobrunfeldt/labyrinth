@@ -1,3 +1,4 @@
+import _ from 'lodash'
 import MoleClient from 'mole-rpc/MoleClientProxified'
 import MoleServer from 'mole-rpc/MoleServer'
 import X from 'mole-rpc/X'
@@ -168,7 +169,7 @@ function createRpc(
     changeSettings: (...args) => client.changeSettings(...args),
   }
 
-  const retryClient = retryify(clientObj, {
+  const retryOptions: Parameters<typeof retryify>[1] = {
     // 3s, 6s
     retryTimeout: (retryCount) => (retryCount + 1) * 3000,
     maxRetries: 0,
@@ -185,9 +186,14 @@ function createRpc(
         conn.close()
       }
     },
-  })
+  }
+  const retryClient = retryify(clientObj, retryOptions)
+  const notifyObj = _.mapValues(clientObj, (val, key) => {
+    return client.notify[key as keyof typeof client.notify]
+  }) as t.RpcProxy<t.ServerRpcAPI>
 
-  const anyClient = retryClient as t.RpcProxyWithNotify<t.ServerRpcAPI>
-  anyClient.notify = retryClient
-  return anyClient
+  return {
+    ...retryClient,
+    notify: retryify(notifyObj, retryOptions),
+  }
 }

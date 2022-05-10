@@ -11,6 +11,7 @@ import { BotId } from 'src/core/bots/availableBots'
 import { connectBot } from 'src/core/bots/framework'
 import {
   Client,
+  ClientOptions,
   createClient as createPeerJsClient,
 } from 'src/core/client/peerjsClient'
 import { createClient as createWebSocketClient } from 'src/core/client/webSocketClient'
@@ -31,6 +32,8 @@ import { zIndices } from 'src/zIndices'
 type Props = {
   serverPeerId: string
   adminToken?: string
+  spectate?: boolean
+  wsUrl?: string
   onClientCreated: (client: Pick<Client, 'serverRpc'>) => void
 }
 
@@ -52,7 +55,7 @@ function Container({ children }: { children: React.ReactNode }) {
 }
 
 export const GameClient = (props: Props) => {
-  const { serverPeerId, adminToken } = props
+  const { serverPeerId, adminToken, spectate } = props
   const [error, setError] = useState<Error | undefined>(undefined)
   const [client, setClient] = useState<
     | Pick<Awaited<ReturnType<typeof createPeerJsClient>>, 'serverRpc'>
@@ -66,7 +69,13 @@ export const GameClient = (props: Props) => {
   >(undefined)
   const [messages, setMessages] = useState<Message[]>(
     adminToken
-      ? [createMessage('You are the host. Game server runs on your browser.')]
+      ? [
+          createMessage(
+            props.wsUrl
+              ? 'Connected to a WebSocket server.'
+              : 'You are the host. Game server runs on your browser.'
+          ),
+        ]
       : []
   )
   const [playerLabelsVisible, setPlayerLabelsVisible] = useState(
@@ -84,21 +93,53 @@ export const GameClient = (props: Props) => {
 
       const logEmoji = getUniqueEmoji()
 
-      const params = new URLSearchParams(window.location.search)
-      const wsUrl = params.get('ws')
-      const client = wsUrl
-        ? await createWebSocketClient({
-            playerId,
-            logger: getLogger(`${logEmoji} CLIENT:`), // eslint-disable-line no-irregular-whitespace
-            rpcLogger: getLogger(`${logEmoji} CLIENT RPC:`), // eslint-disable-line no-irregular-whitespace
-            wsUrl,
-            onJoin: async (state) => {
-              setGameState(state)
+      const clientCommonProps: Omit<
+        ClientOptions,
+        | 'serverPeerId'
+        | 'onPeerError'
+        | 'onPeerConnectionClose'
+        | 'onPeerConnectionOpen'
+        | 'onPeerConnectionError'
+      > = {
+        playerId,
+        logger: getLogger(`${logEmoji} CLIENT:`), // eslint-disable-line no-irregular-whitespace
+        rpcLogger: getLogger(`${logEmoji} CLIENT RPC:`), // eslint-disable-line no-irregular-whitespace
+        onJoin: async (state: t.ClientGameState) => {
+          setGameState(state)
 
-              if (adminToken) {
-                await client.serverRpc.promote(adminToken)
-              }
-            },
+          if (adminToken) {
+            console.log('promote')
+            await client.serverRpc.promote(adminToken)
+          }
+
+          if (adminToken && spectate) {
+            console.log('spectate')
+            await client.serverRpc.spectate(adminToken)
+          }
+        },
+        onStateChange: async (state) => {
+          setError(undefined)
+          setGameState(state)
+        },
+        onPushPositionHover: async (boardPos) => {
+          const uiPos = boardPos
+            ? boardPushPositionToUIPosition(boardPos)
+            : undefined
+          setLastServerHover(uiPos)
+        },
+        onServerReject: async (message) => {
+          console.error('Rejected by server', message)
+          setError(new Error(message))
+        },
+        onMessage: async (msg, opts) => {
+          onMessage(msg, opts)
+        },
+      }
+
+      const client = props.wsUrl
+        ? await createWebSocketClient({
+            ...clientCommonProps,
+            wsUrl: props.wsUrl,
             onWebSocketError: (err) => {
               console.error(err)
               setError(err)
@@ -106,36 +147,10 @@ export const GameClient = (props: Props) => {
             onWebSocketOpen: () => {
               setError(undefined)
             },
-            onStateChange: async (state) => {
-              setError(undefined)
-              setGameState(state)
-            },
-            onPushPositionHover: async (boardPos) => {
-              const uiPos = boardPos
-                ? boardPushPositionToUIPosition(boardPos)
-                : undefined
-              setLastServerHover(uiPos)
-            },
-            onServerReject: async (message) => {
-              console.error('Rejected by server', message)
-              setError(new Error(message))
-            },
-            onMessage: async (msg, opts) => {
-              onMessage(msg, opts)
-            },
           })
         : await createPeerJsClient({
-            playerId,
-            logger: getLogger(`${logEmoji} CLIENT:`), // eslint-disable-line no-irregular-whitespace
-            rpcLogger: getLogger(`${logEmoji} CLIENT RPC:`), // eslint-disable-line no-irregular-whitespace
+            ...clientCommonProps,
             serverPeerId,
-            onJoin: async (state) => {
-              setGameState(state)
-
-              if (adminToken) {
-                await client.serverRpc.promote(adminToken)
-              }
-            },
             onPeerError: (err) => {
               setError(err)
             },
@@ -148,23 +163,6 @@ export const GameClient = (props: Props) => {
             onPeerConnectionError: (err) => {
               console.error(err)
               setError(err)
-            },
-            onStateChange: async (state) => {
-              setError(undefined)
-              setGameState(state)
-            },
-            onPushPositionHover: async (boardPos) => {
-              const uiPos = boardPos
-                ? boardPushPositionToUIPosition(boardPos)
-                : undefined
-              setLastServerHover(uiPos)
-            },
-            onServerReject: async (message) => {
-              console.error('Rejected by server', message)
-              setError(new Error(message))
-            },
-            onMessage: async (msg, opts) => {
-              onMessage(msg, opts)
             },
           })
 

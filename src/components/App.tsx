@@ -15,57 +15,56 @@ export const App = () => {
     undefined
   )
   const [server, setServer] = useState<
-    { peerId: string; adminToken?: string; isServerHost: boolean } | undefined
+    | {
+        peerId: string
+        adminToken?: string
+        isServerHost: boolean
+        wsUrl?: string
+      }
+    | undefined
   >(undefined)
 
-  useEffect(() => {
-    const maybeServerId = window.location.hash.slice(1)
-    const serverPeerId = maybeServerId === '' ? undefined : maybeServerId
-
-    if (serverPeerId) {
-      joinGame(serverPeerId)
-    }
-  }, [])
-
-  // Special parameters to make bot development easier
-
   const params = new URLSearchParams(window.location.search)
-  const botsStr = params.get('bots') ?? ''
-  const bots = botsStr
-    .split(',')
-    .map((s) => s.trim())
-    .filter((s) => s.length > 1)
 
-  if (bots.length > 0) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEffect(() => {
-      async function init() {
+  useEffect(() => {
+    async function init() {
+      const botsStr = params.get('bots') ?? ''
+      const bots = botsStr
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 1)
+
+      if (bots.length > 0) {
         const s = await hostGame()
+
         for (const id of bots) {
           await connectBot(id as BotId, `bot-${uuid()}`, s.peerId)
         }
-      }
-      init()
-    }, [])
-  }
 
-  const wsUrl = params.get('ws')
-  if (wsUrl) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEffect(() => {
-      joinGame(wsUrl, params.get('adminToken') ?? undefined) // just a hack to show the url in the UI while connecting
-    }, [])
-  }
-
-  if (params.get('spectate') === 'true') {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEffect(() => {
-      if (!client || !server) {
         return
       }
-      client.serverRpc.spectate(server.adminToken!)
-    })
-  }
+
+      const wsUrl = params.get('ws')
+      if (wsUrl) {
+        setServer({
+          peerId: wsUrl, // Hack to show websocket url at the top of the UI
+          adminToken: params.get('adminToken') ?? undefined,
+          isServerHost: false,
+          wsUrl,
+        })
+        return
+      }
+
+      const maybeServerId = window.location.hash.slice(1)
+      const serverPeerId = maybeServerId === '' ? undefined : maybeServerId
+
+      if (serverPeerId) {
+        joinPeerJsGame(serverPeerId)
+      }
+    }
+
+    init().catch((err) => console.error('Error during init:', err))
+  }, [])
 
   async function hostGame() {
     // Make server id stable across page closes
@@ -84,10 +83,10 @@ export const App = () => {
     return server
   }
 
-  function joinGame(serverPeerId: string, adminToken?: string) {
+  function joinPeerJsGame(serverPeerId: string) {
     setServer({
       peerId: serverPeerId,
-      adminToken,
+      adminToken: undefined,
       isServerHost: false,
     })
     window.location.hash = serverPeerId
@@ -99,13 +98,17 @@ export const App = () => {
 
   return (
     <div className="App">
-      {!server && <StartPage onHostGame={hostGame} onJoinGame={joinGame} />}
+      {!server && (
+        <StartPage onHostGame={hostGame} onJoinGame={joinPeerJsGame} />
+      )}
 
       {server && (
         <GameClient
           serverPeerId={server.peerId}
           adminToken={server.adminToken}
+          spectate={params.get('spectate') === 'true'}
           onClientCreated={setClient}
+          wsUrl={server.wsUrl}
         />
       )}
     </div>
