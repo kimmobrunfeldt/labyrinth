@@ -25,6 +25,8 @@ class LabyrinthBot:
             "onServerReject": self.on_server_reject,
         }
 
+        self.waiting_responses = {}
+
     def has_connected(self):
         return self.ws is not None
 
@@ -32,25 +34,28 @@ class LabyrinthBot:
         connection = websockets.connect(uri=self.ws_url)
         print('connection created')
         async with connection as websocket:
-            print('with conn')
             self.ws = websocket
             await self.ws.send(json.dumps(self.meta))
 
             async for data in self.ws:
                 message = json.loads(data)
-                result = await self.handle(message)
 
-                response = utils.format_response(
-                    message['id'] if 'id' in message else None,
-                    result
-                )
-
-                await self.ws.send(response)
+                if 'method' in message:
+                    result = await self.handleRequest(message)
+                    response = utils.format_response(
+                        message['id'] if 'id' in message else None,
+                        result
+                    )
+                    await self.ws.send(json.dumps(response))
+                elif 'result' in message:
+                    await self.handleResponse(message)
+                else:
+                    print('Unknown message type:', message)
 
             # Closes the connection.
             await self.ws.close()
 
-    async def handle(self, message):
+    async def handleRequest(self, message):
         method = message['method']
         print('<-', method)
         if method in self.handlers:
@@ -60,29 +65,49 @@ class LabyrinthBot:
 
         return None
 
+    async def handleResponse(self, message):
+        if message['id'] not in self.waiting_responses:
+            print('Response id not found')
+            return
+
+        print('Response to', message['id'])
+        future = self.waiting_responses[message['id']]
+        future.set_result(message['result'])
+        del self.waiting_responses[message['id']]
+
     # Bot actions
 
     async def move(self, position):
         print('-> move', position)
         req = utils.format_request('move', position)
-        await self.ws.send(req)
+        await self.ws.send(json.dumps(req))
 
     async def push(self, pushPosition, rotation):
         print('-> setExtraPieceRotation', rotation)
         req = utils.format_request('setExtraPieceRotation', rotation)
-        await self.ws.send(req)
+        await self.ws.send(json.dumps(req))
 
         print('-> push', pushPosition)
         req = utils.format_request('push', pushPosition)
-        await self.ws.send(req)
+        await self.ws.send(json.dumps(req))
+
+    async def get_state(self):
+        req = utils.format_request('getState')
+        await self.ws.send(json.dumps(req))
+
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
+        self.waiting_responses[req['id']] = future
+        result = await future
+        return result
 
     async def start(self):
         req = utils.format_request('start', self.admin_token)
-        await self.ws.send(req)
+        await self.ws.send(json.dumps(req))
 
     async def restart(self):
         req = utils.format_request('restart', self.admin_token)
-        await self.ws.send(req)
+        await self.ws.send(json.dumps(req))
 
      # Bot reactions
 
@@ -122,7 +147,7 @@ class LabyrinthBot:
 
     # Utils
 
-    def get_game_state(self):
+    def get_cached_game_state(self):
         return self.game_state
 
     def get_my_position(self):

@@ -3,29 +3,32 @@ import json
 
 def counter():
     """Produces unique ids"""
-    val = 0
+    val = 1  # Start from >0 because the mole-rpc server has a bug where it doesn't respond to 0 id
     while True:
         yield val
         val += 1
 
 
+request_id_counter = counter()
+
+
 def format_request(method, *params):
-    id = next(counter())
-    return json.dumps({
+    id = next(request_id_counter)
+    return {
         "jsonrpc": "2.0",
         "id": id,
         "method": method,
         "params": params
-    })
+    }
 
 
 # https://www.jsonrpc.org/specification#response_object
 def format_response(id, result):
-    return json.dumps({
+    return {
         "jsonrpc": "2.0",
         "id": id,
         "result": result
-    })
+    }
 
 
 BOARD_PUSH_POSITIONS = [

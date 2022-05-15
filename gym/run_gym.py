@@ -5,7 +5,7 @@ import argparse
 import asyncio
 import time
 from labyrinth_env import LabyrinthEnv
-from stable_baselines3.common.env_checker import check_env
+from stable_baselines3.ppo import PPO
 
 # To make syncer working in SyncLabyrinthBot
 # This could probably be work-arounded by running the tasks within the running
@@ -32,10 +32,29 @@ async def main():
     print('Connected!')
     sync_bot = SyncLabyrinthBot(bot)
     env = LabyrinthEnv(sync_bot)
-    env.reset()
-    check_env(env)
 
-    await asyncio.ensure_future(task)
+    model = PPO("MultiInputPolicy", env, verbose=1)
+    model.learn(total_timesteps=10)
+
+    print('connect to game now!')
+    sync_bot.restart()
+    await asyncio.sleep(10)
+    obs = env.reset()
+
+    for i in range(200):
+        action, _states = model.predict(obs)
+        print(action)
+        obs, rewards, dones, info = env.step(action)
+        print('rewards', rewards)
+        while True:
+            state_now = sync_bot.get_state()
+            if state_now['players'][state_now['playerTurn']]['id'] == state_now['me']['id']:
+                break
+
+            print('waiting for my turn..')
+            await asyncio.sleep(4)
+
+    await task
 
 
 l = asyncio.get_event_loop()

@@ -2,31 +2,45 @@ from syncer import sync
 
 
 class SyncLabyrinthBot:
+    """
+    Synchronous wrapper for LabyrinthBot, to allow calling the methods within
+    gym env.
+    """
 
     def __init__(self, bot):
         self.bot = bot
 
-    async def connect(self, *args, **kwargs):
-        return sync(self.bot.connect(*args, **kwargs))
+        self._connect = sync(self.bot.connect)
+        self._move = sync(self.bot.move)
+        self._push = sync(self.bot.push)
+        self._get_state = sync(self.bot.get_state)
+        self._start = sync(self.bot.start)
+        self._restart = sync(self.bot.restart)
 
-    async def move(self, *args, **kwargs):
-        return sync(self.bot.move(*args, **kwargs))
+    def connect(self, *args, **kwargs):
+        return self._connect(*args, **kwargs)
 
-    async def push(self, *args, **kwargs):
-        return sync(self.bot.push(*args, **kwargs))
+    def move(self, *args, **kwargs):
+        return self._move(*args, **kwargs)
 
-    async def start(self, *args, **kwargs):
-        return sync(self.bot.start(*args, **kwargs))
+    def push(self, *args, **kwargs):
+        return self._push(*args, **kwargs)
 
-    async def restart(self, *args, **kwargs):
-        return sync(self.bot.restart(*args, **kwargs))
+    def get_state(self, *args, **kwargs):
+        return self._get_state(*args, **kwargs)
+
+    def start(self, *args, **kwargs):
+        return self._start(*args, **kwargs)
+
+    def restart(self, *args, **kwargs):
+        return self._restart(*args, **kwargs)
 
     # Sync methods
     def has_connected(self, *args, **kwargs):
         return self.bot.has_connected(*args, **kwargs)
 
-    def get_game_state(self, *args, **kwargs):
-        return self.bot.get_game_state(*args, **kwargs)
+    def get_cached_game_state(self, *args, **kwargs):
+        return self.bot.get_cached_game_state(*args, **kwargs)
 
     def get_my_position(self, *args, **kwargs):
         return self.bot.get_my_position(*args, **kwargs)

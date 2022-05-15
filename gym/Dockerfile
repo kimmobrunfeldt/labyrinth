@@ -13,5 +13,5 @@ RUN apt-get -q -y install build-essential git gcc vim python3 python3-pip
 RUN DEBIAN_FRONTEND=noninteractive apt-get -q -y install cmake libopenmpi-dev python3-dev zlib1g-dev
 
 # Install python deps
-RUN pip3 install gym opencv-python-headless stable-baselines3[extra]
+RUN pip3 install gym opencv-python-headless stable-baselines3[extra] numpy
 RUN pip3 install websockets syncer nest_asyncio
