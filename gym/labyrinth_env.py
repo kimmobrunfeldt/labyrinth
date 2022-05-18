@@ -1,11 +1,13 @@
+import math
 import gym
 import numpy as np
 from bot import utils
 from bot import SyncLabyrinthBot
 from bot.LabyrinthBot import LabyrinthBot
-from bot.utils import BOARD_PUSH_POSITIONS
+from bot.utils import BOARD_PUSH_POSITIONS, get_piece_position, get_player_position
 from gym.spaces import Discrete, Box, Dict, Tuple, MultiDiscrete
 from stable_baselines3.common.env_checker import check_env
+from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.td3.policies import MlpPolicy
 from stable_baselines3.ppo import PPO
 from stable_baselines3.common.env_util import make_vec_env
@@ -113,11 +115,13 @@ class LabyrinthEnv(gym.Env):
             game_action['push']['position'],
             game_action['push']['rotation']
         )
-        move_result = self.bot.move(game_action['move'])
+        self.bot.move(game_action['move'])
         new_state = self.bot.get_state()
-        print('new_state', new_state)
         observation = game_state_to_observation(new_state)
+        print('new_observation', observation)
         reward = state_transition_to_reward(prev_state, new_state)
+        self.tensor_reward = reward
+        print('-- REWARD', reward)
         episode_finished = new_state['stage'] == 'finished'
         return observation, reward, episode_finished, {}
 
@@ -161,6 +165,10 @@ def game_state_to_observation(state):
     }
 
 
+def distance(x1, y1, x2, y2):
+    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+
+
 def map_pieces(f, pieces):
     return list(
         map(
@@ -197,6 +205,9 @@ def piece_to_trophy_index(piece):
 
 
 def state_transition_to_reward(state1, state2):
+    if state2['stage'] != 'playing':
+        return 0
+
     if state1['turnCounter'] == state2['turnCounter']:
         return -1
 
@@ -206,4 +217,40 @@ def state_transition_to_reward(state1, state2):
     state2_found = sum(
         (1 if c['found'] else 0 for c in state2['me']['censoredCards'])
     )
-    return state2_found - state1_found
+    if state2_found > state1_found:
+        return state2_found - state1_found  # this should always be 1
+
+    curr_trophy = state2['myCurrentCards'][0]['trophy']
+
+    extra_piece = state2['pieceBag'][0]
+    if 'trophy' in extra_piece and extra_piece['trophy']:
+        return 0.4  # It is a good thing to get your trophy as the extra piece
+
+    pieces = state2['board']['pieces']
+    trophy_pos = get_piece_position(
+        pieces,
+        lambda p: 'trophy' in p and p['trophy'] == curr_trophy
+    )
+    my_pos = state2['myPosition']
+    max_distance = distance(0, 0, 6, 6)
+    distance_to_trophy = distance(
+        my_pos['x'], my_pos['y'], trophy_pos['x'], trophy_pos['y'])
+    # Give reward from 0 - 0.5 depending on the distance towards trophy
+    return (max_distance - distance_to_trophy) / max_distance * 0.5
+
+
+class TensorboardCallback(BaseCallback):
+    def __init__(self, verbose=1):
+        super(TensorboardCallback, self).__init__(verbose)
+        self.cumulative_reward = 0
+
+    def _on_rollout_end(self) -> None:
+        self.logger.record("rollout/cumulative_reward", self.cumulative_reward)
+
+        # reset vars once recorded
+        self.cumulative_reward = 0
+
+    def _on_step(self) -> bool:
+        self.cumulative_reward += self.training_env.get_attr("tensor_reward")[
+            0]
+        return True

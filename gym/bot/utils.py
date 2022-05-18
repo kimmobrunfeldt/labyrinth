@@ -67,3 +67,10 @@ def get_player_position(pieces, playerId):
             )
             if p:
                 return {"x": x, "y": y}
+
+
+def get_piece_position(pieces, predicate):
+    for y, row in enumerate(pieces):
+        for x, piece in enumerate(row):
+            if predicate(piece):
+                return {"x": x, "y": y, "piece": piece}

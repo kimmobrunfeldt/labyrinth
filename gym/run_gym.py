@@ -1,5 +1,6 @@
 from bot.LabyrinthBot import LabyrinthBot
 from bot.SyncLabyrinthBot import SyncLabyrinthBot
+from labyrinth_env import TensorboardCallback
 import nest_asyncio
 import argparse
 import asyncio
@@ -33,8 +34,10 @@ async def main():
     sync_bot = SyncLabyrinthBot(bot)
     env = LabyrinthEnv(sync_bot)
 
-    model = PPO("MultiInputPolicy", env, verbose=1)
-    model.learn(total_timesteps=10)
+    model = PPO("MultiInputPolicy", env, verbose=1,
+                tensorboard_log="./tensorboard/")
+    rewards_callback = TensorboardCallback()
+    model.learn(total_timesteps=30000, callback=rewards_callback)
 
     print('connect to game now!')
     sync_bot.restart()
