@@ -1,12 +1,16 @@
 export type Logger = ReturnType<typeof getLogger>
 export function getLogger(label: string) {
   return {
-    debug: (...args: unknown[]) => console.debug(label, ...args),
-    info: (...args: unknown[]) => console.info(label, ...args),
-    log: (...args: unknown[]) => console.log(label, ...args),
-    warn: (...args: unknown[]) => console.warn(label, ...args),
-    error: (...args: unknown[]) => console.error(label, ...args),
+    debug: (...args: unknown[]) => console.debug(timestamp(), label, ...args),
+    info: (...args: unknown[]) => console.info(timestamp(), label, ...args),
+    log: (...args: unknown[]) => console.log(timestamp(), label, ...args),
+    warn: (...args: unknown[]) => console.warn(timestamp(), label, ...args),
+    error: (...args: unknown[]) => console.error(timestamp(), label, ...args),
   }
+}
+
+function timestamp() {
+  return new Date().toISOString()
 }
 
 export function prefixLogger(logger: Logger, prefix: string) {

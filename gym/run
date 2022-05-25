@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -euo pipefail
+
+NAME=${1:-labyrinth}
+
+docker run \
+  -v $PWD:/root \
+  -w /root \
+  --rm \
+  --network host \
+  --ipc host \
+  --name "$NAME" \
+  -i \
+  --platform linux/amd64 \
+  -t labyrinth:latest \
+  /bin/bash
