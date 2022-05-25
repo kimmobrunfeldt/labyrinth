@@ -67,7 +67,7 @@ class LabyrinthBot:
 
     async def handleResponse(self, message):
         if message['id'] not in self.waiting_responses:
-            print('Response id not found')
+            print('Response id not found', message)
             return
 
         print('Response to', message['id'])
@@ -79,16 +79,16 @@ class LabyrinthBot:
 
     async def move(self, position):
         print('-> move', position)
-        req = utils.format_request('move', position)
+        req = utils.format_notify('move', position)
         await self.ws.send(json.dumps(req))
 
     async def push(self, pushPosition, rotation):
         print('-> setExtraPieceRotation', rotation)
-        req = utils.format_request('setExtraPieceRotation', rotation)
+        req = utils.format_notify('setExtraPieceRotation', rotation)
         await self.ws.send(json.dumps(req))
 
         print('-> push', pushPosition)
-        req = utils.format_request('push', pushPosition)
+        req = utils.format_notify('push', pushPosition)
         await self.ws.send(json.dumps(req))
 
     async def get_state(self):
@@ -99,19 +99,22 @@ class LabyrinthBot:
         future = loop.create_future()
         self.waiting_responses[req['id']] = future
         result = await future
+        self.game_state = result
         return result
 
     async def start(self):
-        req = utils.format_request('start', self.admin_token)
+        req = utils.format_notify('start', self.admin_token)
         await self.ws.send(json.dumps(req))
 
     async def restart(self):
-        req = utils.format_request('restart', self.admin_token)
+        req = utils.format_notify('restart', self.admin_token)
         await self.ws.send(json.dumps(req))
 
      # Bot reactions
 
     async def on_state_change(self, state):
+        return
+
         if self.game_state and self.game_state['stage'] != state['stage']:
             # Reset reaction memory
             self.turns_reacted = set()

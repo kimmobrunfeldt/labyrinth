@@ -79,6 +79,8 @@ class LabyrinthEnv(gym.Env):
     def __init__(self, bot):
         self.bot = bot
 
+        # self._max_episode_steps = 200
+
         self.action_space = MultiDiscrete((
             # Push positions
             PUSH_POSITIONS,
@@ -94,7 +96,7 @@ class LabyrinthEnv(gym.Env):
                     PIECE_TROPHIES,
                     ROTATIONS
                 )),
-                "my_current_card": Discrete(TROPHIES),
+                "my_current_card": Discrete(PIECE_TROPHIES),
                 "my_position": Discrete(GRID[0] * GRID[1]),
                 "board_piece_types": Box(low=0, high=PIECE_TYPES, shape=GRID, dtype=np.int8),
                 "board_piece_rotations": Box(low=0, high=ROTATIONS, shape=GRID, dtype=np.int8),
@@ -122,7 +124,8 @@ class LabyrinthEnv(gym.Env):
         reward = state_transition_to_reward(prev_state, new_state)
         self.tensor_reward = reward
         print('-- REWARD', reward)
-        episode_finished = new_state['stage'] == 'finished'
+        episode_finished = new_state['stage'] == 'finished' or reward < -10
+        print('episode_finished', episode_finished)
         return observation, reward, episode_finished, {}
 
 
@@ -205,11 +208,14 @@ def piece_to_trophy_index(piece):
 
 
 def state_transition_to_reward(state1, state2):
-    if state2['stage'] != 'playing':
+    if state2['stage'] == 'setup':
         return 0
 
+    if state2['stage'] == 'finished':
+        return 100
+
     if state1['turnCounter'] == state2['turnCounter']:
-        return -1
+        return -100
 
     state1_found = sum(
         (1 if c['found'] else 0 for c in state1['me']['censoredCards'])
@@ -218,13 +224,18 @@ def state_transition_to_reward(state1, state2):
         (1 if c['found'] else 0 for c in state2['me']['censoredCards'])
     )
     if state2_found > state1_found:
+        print('found more', state2_found, state1_found)
         return state2_found - state1_found  # this should always be 1
 
     curr_trophy = state2['myCurrentCards'][0]['trophy']
 
     extra_piece = state2['pieceBag'][0]
     if 'trophy' in extra_piece and extra_piece['trophy']:
-        return 0.4  # It is a good thing to get your trophy as the extra piece
+        return 0.5  # It is a semi-good thing to get your trophy as the extra piece
+
+    if state1['myPosition']['x'] == state2['myPosition']['x'] and state1['myPosition']['y'] == state2['myPosition']['y']:
+        # Zero reward for staying in place
+        return 0
 
     pieces = state2['board']['pieces']
     trophy_pos = get_piece_position(
@@ -235,8 +246,9 @@ def state_transition_to_reward(state1, state2):
     max_distance = distance(0, 0, 6, 6)
     distance_to_trophy = distance(
         my_pos['x'], my_pos['y'], trophy_pos['x'], trophy_pos['y'])
-    # Give reward from 0 - 0.5 depending on the distance towards trophy
-    return (max_distance - distance_to_trophy) / max_distance * 0.5
+
+    # Give reward from 0 - 10 depending on the distance towards trophy
+    return (max_distance - distance_to_trophy) / max_distance * 10
 
 
 class TensorboardCallback(BaseCallback):

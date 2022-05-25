@@ -1,4 +1,3 @@
-import { assertDefined } from 'src/core/server/board'
 import { createGame, CreateGameOptions } from 'src/core/server/game'
 import { createServerNetworking } from 'src/core/server/networking/networking'
 import {
@@ -11,14 +10,13 @@ import { getLogger } from 'src/utils/logger'
 import {
   getPlayerLabel,
   getRandomAdminToken,
-  sleep,
   wrapWithErrorIgnoring,
 } from 'src/utils/utils'
 
 const logger = getLogger('📓 SERVER:')
 
 export const TURN_TIMEOUT_SECONDS = 90
-export const CHECK_TURN_END_INTERVAL_SECONDS = 0.5
+export const CHECK_TURN_END_INTERVAL_SECONDS = 0.001
 
 export type GameServer = {
   peerId: string
@@ -185,6 +183,9 @@ export async function createServer(
   }
 
   async function sendStateToEveryone() {
+    // Disable
+    return Promise.resolve()
+
     return forAllServerPlayers(
       (player) =>
         player.clientRpc.onStateChange(
@@ -195,6 +196,9 @@ export async function createServer(
   }
 
   async function sendMessage(msg: string, opts: t.MessageFormatOptions = {}) {
+    // Disable
+    return Promise.resolve([])
+
     return forAllServerPlayers(
       (player) => player.clientRpc.onMessage(msg, opts),
       'connected'
@@ -262,14 +266,9 @@ export async function createServer(
 
     const currentCardsStart = game.getPlayersCurrentCards(player.id)
     const turnCounterNow = game.getState().turnCounter
-    const secondLeftWarnings = [60, 30, 10].sort().reverse()
 
-    for (
-      let i = 0;
-      i < TURN_TIMEOUT_SECONDS / CHECK_TURN_END_INTERVAL_SECONDS;
-      ++i
-    ) {
-      await sleep(CHECK_TURN_END_INTERVAL_SECONDS * 1000)
+    while (true) {
+      await new Promise((resolve) => setImmediate(resolve))
       if (game.getState().stage === 'setup') {
         logger.log('Game has restarted!')
         return
@@ -294,24 +293,6 @@ export async function createServer(
         logger.log('Player', getPlayerLabel(player), 'has finished their turn')
         return
       }
-
-      const secondsPassed = i * CHECK_TURN_END_INTERVAL_SECONDS
-      const timeLeft = TURN_TIMEOUT_SECONDS - secondsPassed
-      const warning = secondLeftWarnings.find((s) => timeLeft < s)
-      if (warning) {
-        const first = assertDefined(secondLeftWarnings.shift())
-        if (first !== warning) {
-          throw new Error(`Unexpected condition`)
-        }
-        sendMessage(`${warning} seconds left in turn`)
-      }
     }
-
-    sendMessage(
-      `Timeout for ${
-        game.whosTurn().name
-      } after ${TURN_TIMEOUT_SECONDS} seconds`
-    )
-    throw new Error(`Turn timeout for player ${getPlayerLabel(player)}`)
   }
 }

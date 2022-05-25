@@ -22,7 +22,16 @@ def format_request(method, *params):
     }
 
 
+def format_notify(method, *params):
+    return {
+        "jsonrpc": "2.0",
+        "method": method,
+        "params": params
+    }
+
 # https://www.jsonrpc.org/specification#response_object
+
+
 def format_response(id, result):
     return {
         "jsonrpc": "2.0",
