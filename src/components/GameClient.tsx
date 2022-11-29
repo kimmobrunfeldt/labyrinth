@@ -2,7 +2,7 @@ import _ from 'lodash'
 import React, { useEffect, useState } from 'react'
 import BoardComponent from 'src/components/Board'
 import ConfirmLeave from 'src/components/ConfirmLeave'
-import { RotateIcon } from 'src/components/Icons'
+import { CHAT_BOX_HEIGHT_PX } from 'src/components/constants'
 import MenuBar from 'src/components/MenuBar'
 import { createMessage, Message, MessageBox } from 'src/components/MessagesBox'
 import { NextTrophy } from 'src/components/NextTrophy'
@@ -27,7 +27,6 @@ import {
   uiPushPositionToBoard,
 } from 'src/utils/uiUtils'
 import { uuid } from 'src/utils/utils'
-import { zIndices } from 'src/zIndices'
 
 type Props = {
   serverPeerId: string
@@ -47,6 +46,7 @@ function Container({ children }: { children: React.ReactNode }) {
         flexDirection: 'column',
         alignItems: 'center',
         position: 'relative',
+        minWidth: 0,
       }}
     >
       {children}
@@ -357,6 +357,7 @@ export const GameClient = (props: Props) => {
           width: '100%',
           display: 'flex',
           flex: 1,
+          minWidth: 0,
           flexDirection: 'column',
           justifyContent: 'space-between',
           userSelect: 'none',
@@ -364,48 +365,37 @@ export const GameClient = (props: Props) => {
       >
         <div
           style={{
-            position: 'relative',
-            padding: '10px 0',
-            flex: 1,
             display: 'flex',
-            flexDirection: 'column',
+            flex: 1,
+            padding: '10px 0',
+            minWidth: 0,
             justifyContent: 'center',
             alignItems: 'center',
-            width: '100%',
           }}
         >
-          <div
-            style={{
-              position: 'relative',
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              width: '100%',
-            }}
-          >
-            <BoardComponent
-              gameState={gameState}
-              extraPiece={gameState.pieceBag[0]}
-              onMove={onMove}
-              onPush={onPush}
-              onClickExtraPiece={onClickExtraPiece}
-              previousPushPosition={gameState.previousPushPosition}
-              lastServerHover={lastServerHover}
-              onPushPositionHover={onPushPositionHover}
-              playerLabelsVisible={playerLabelsVisible}
-            />
-            {adminToken && gameState.stage === 'setup' && (
-              <BoardShuffleIcon onShuffleBoardClick={onShuffleBoardClick} />
-            )}
-          </div>
+          <BoardComponent
+            gameState={gameState}
+            extraPiece={gameState.pieceBag[0]}
+            onMove={onMove}
+            onPush={onPush}
+            onClickExtraPiece={onClickExtraPiece}
+            previousPushPosition={gameState.previousPushPosition}
+            lastServerHover={lastServerHover}
+            onPushPositionHover={onPushPositionHover}
+            playerLabelsVisible={playerLabelsVisible}
+            onBoardShuffleClick={
+              adminToken && gameState.stage === 'setup'
+                ? onShuffleBoardClick
+                : undefined
+            }
+          />
         </div>
+
         <div
           style={{
             padding: '0 15px',
             width: '100%',
-            height: '100px',
+            height: `${CHAT_BOX_HEIGHT_PX}px`,
             flexShrink: 0,
           }}
         >
@@ -424,45 +414,5 @@ export const GameClient = (props: Props) => {
     </Container>
   )
 }
-
-const BoardShuffleIcon = ({
-  onShuffleBoardClick,
-}: {
-  onShuffleBoardClick: () => void
-}) => (
-  <div
-    style={{
-      userSelect: 'none',
-      position: 'absolute',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      width: '100%',
-      height: '100%',
-      top: 0,
-      left: 0,
-    }}
-  >
-    <div
-      title="Shuffle board"
-      onClick={onShuffleBoardClick}
-      className="icon-hover"
-      style={{
-        cursor: 'pointer',
-        position: 'absolute',
-        zIndex: zIndices.boardShuffleIcon,
-        width: '10%',
-        maxWidth: '60px',
-      }}
-    >
-      <RotateIcon
-        fill="#454545"
-        style={{
-          width: '100%',
-        }}
-      />
-    </div>
-  </div>
-)
 
 export default GameClient

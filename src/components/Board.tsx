@@ -1,8 +1,10 @@
 import _ from 'lodash'
 import React, { useState } from 'react'
 import { useResizeDetector } from 'react-resize-detector'
+import { CHAT_BOX_HEIGHT_PX } from 'src/components/constants'
 import { ExtraPiece } from 'src/components/ExtraPiece'
-import { CaretUp } from 'src/components/Icons'
+import { CaretUp, RotateIcon } from 'src/components/Icons'
+import { MENU_BAR_HEIGHT } from 'src/components/MenuBar'
 import { EmptyPiece, PIECE_MARGIN_PX } from 'src/components/Piece'
 import { PieceOnBoard } from 'src/components/PieceOnBoard'
 import { PushPosition } from 'src/components/PushPosition'
@@ -36,6 +38,7 @@ export type Props = {
   previousPushPosition?: t.PushPosition
   lastServerHover?: UIPushPosition
   playerLabelsVisible: boolean
+  onBoardShuffleClick?: () => void
 }
 
 type PieceToRender =
@@ -60,6 +63,7 @@ const Board = ({
   onPushPositionHover,
   lastServerHover,
   playerLabelsVisible,
+  onBoardShuffleClick,
 }: Props) => {
   const [lastLocalHover, setLastLocalHover] = useState<
     UIPushPosition | undefined
@@ -290,6 +294,10 @@ const Board = ({
           </div>
         )
       })}
+
+      {onBoardShuffleClick && (
+        <BoardShuffleIcon onShuffleBoardClick={onBoardShuffleClick} />
+      )}
     </div>
   )
 
@@ -305,11 +313,12 @@ const Board = ({
       style={{
         position: 'relative',
         padding: `${PIECE_MARGIN_PX}px`,
-        width: '100%',
+        // Calculate if we should take max vertical or horizontal space
+        ...(window.innerHeight - (MENU_BAR_HEIGHT + CHAT_BOX_HEIGHT_PX) <
+        window.innerWidth
+          ? { height: `100%` }
+          : { width: `100%` }),
         margin: '0 auto',
-        minWidth: '260px',
-        maxWidth: '800px',
-        maxHeight: '75vh',
         aspectRatio: '1 / 1',
       }}
     >
@@ -413,3 +422,43 @@ const BoardBackground = ({ pieceWidth }: { pieceWidth: number }) => (
 )
 
 export default Board
+
+const BoardShuffleIcon = ({
+  onShuffleBoardClick,
+}: {
+  onShuffleBoardClick: () => void
+}) => (
+  <div
+    style={{
+      userSelect: 'none',
+      position: 'absolute',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: '100%',
+      height: '100%',
+      top: 0,
+      left: 0,
+    }}
+  >
+    <div
+      title="Shuffle board"
+      onClick={onShuffleBoardClick}
+      className="icon-hover"
+      style={{
+        cursor: 'pointer',
+        position: 'absolute',
+        zIndex: zIndices.boardShuffleIcon,
+        width: '10%',
+        maxWidth: '60px',
+      }}
+    >
+      <RotateIcon
+        fill="#454545"
+        style={{
+          width: '100%',
+        }}
+      />
+    </div>
+  </div>
+)
