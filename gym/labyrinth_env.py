@@ -1,5 +1,6 @@
 import math
 import gym
+from bot.utils import flatten
 import numpy as np
 from bot import utils
 from bot import SyncLabyrinthBot
@@ -98,19 +99,22 @@ class LabyrinthEnv(gym.Env):
                 )),
                 "my_current_card": Discrete(PIECE_TROPHIES),
                 "my_position": Discrete(GRID[0] * GRID[1]),
-                "board_piece_types": Box(low=0, high=PIECE_TYPES, shape=GRID, dtype=np.int8),
-                "board_piece_rotations": Box(low=0, high=ROTATIONS, shape=GRID, dtype=np.int8),
-                "board_piece_trophies": Box(low=0, high=PIECE_TROPHIES, shape=GRID, dtype=np.int8),
+                "board_piece_types": Box(low=0, high=PIECE_TYPES, shape=(GRID[0] * GRID[1], ), dtype=np.int8),
+                "board_piece_rotations": Box(low=0, high=ROTATIONS, shape=(GRID[0] * GRID[1], ), dtype=np.int8),
+                "board_piece_trophies": Box(low=0, high=PIECE_TROPHIES, shape=(GRID[0] * GRID[1], ), dtype=np.int8),
             }
         )
 
     def reset(self):
         self.bot.restart()
         self.bot.start()
+        self.steps_count = 0
         observation = game_state_to_observation(self.bot.get_state())
         return observation
 
     def step(self, action):
+        self.steps_count += 1
+
         prev_state = self.bot.get_cached_game_state()
         game_action = gym_action_to_game_action(action)
         self.bot.push(
@@ -123,8 +127,8 @@ class LabyrinthEnv(gym.Env):
         print('new_observation', observation)
         reward = state_transition_to_reward(prev_state, new_state)
         self.tensor_reward = reward
-        print('-- REWARD', reward)
-        episode_finished = new_state['stage'] == 'finished' or reward < -10
+        episode_finished = new_state['stage'] == 'finished' or reward < - \
+            10 or self.steps_count > 200
         print('episode_finished', episode_finished)
         return observation, reward, episode_finished, {}
 
@@ -173,7 +177,7 @@ def distance(x1, y1, x2, y2):
 
 
 def map_pieces(f, pieces):
-    return list(
+    return flatten(list(
         map(
             lambda row: list(
                 map(
@@ -183,7 +187,7 @@ def map_pieces(f, pieces):
             ),
             pieces
         ),
-    )
+    ))
 
 
 def gym_action_to_game_action(gym_action):
@@ -209,12 +213,15 @@ def piece_to_trophy_index(piece):
 
 def state_transition_to_reward(state1, state2):
     if state2['stage'] == 'setup':
+        print('-- REWARD: 0 (setup stage)')
         return 0
 
     if state2['stage'] == 'finished':
-        return 100
+        print('-- REWARD: 500 (game finished)')
+        return 500
 
     if state1['turnCounter'] == state2['turnCounter']:
+        print('-- REWARD: -100 (stale turn)')
         return -100
 
     state1_found = sum(
@@ -224,17 +231,19 @@ def state_transition_to_reward(state1, state2):
         (1 if c['found'] else 0 for c in state2['me']['censoredCards'])
     )
     if state2_found > state1_found:
-        print('found more', state2_found, state1_found)
-        return state2_found - state1_found  # this should always be 1
+        rew = (state2_found - state1_found) * 100
+        print('-- REWARD: {} (found trophy)'.format(rew))
+        return rew
 
     curr_trophy = state2['myCurrentCards'][0]['trophy']
 
+    if state1['myPosition']['x'] == state2['myPosition']['x'] and state1['myPosition']['y'] == state2['myPosition']['y']:
+        print('-- REWARD: -1 (staying in the same position)')
+        return -1
+
     extra_piece = state2['pieceBag'][0]
     if 'trophy' in extra_piece and extra_piece['trophy']:
-        return 0.5  # It is a semi-good thing to get your trophy as the extra piece
-
-    if state1['myPosition']['x'] == state2['myPosition']['x'] and state1['myPosition']['y'] == state2['myPosition']['y']:
-        # Zero reward for staying in place
+        print('-- REWARD: 0 (trophy in extra piece)')
         return 0
 
     pieces = state2['board']['pieces']
@@ -247,8 +256,10 @@ def state_transition_to_reward(state1, state2):
     distance_to_trophy = distance(
         my_pos['x'], my_pos['y'], trophy_pos['x'], trophy_pos['y'])
 
-    # Give reward from 0 - 10 depending on the distance towards trophy
-    return (max_distance - distance_to_trophy) / max_distance * 10
+    # Give reward from 1 - 11 depending on the distance towards trophy
+    rew = (max_distance - distance_to_trophy) / max_distance * 10 + 1
+    print('-- REWARD: {} (moved successfully)'.format(rew))
+    return rew
 
 
 class TensorboardCallback(BaseCallback):

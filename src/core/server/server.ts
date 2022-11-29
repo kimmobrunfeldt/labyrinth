@@ -15,9 +15,6 @@ import {
 
 const logger = getLogger('📓 SERVER:')
 
-export const TURN_TIMEOUT_SECONDS = 90
-export const CHECK_TURN_END_INTERVAL_SECONDS = 0.001
-
 export type GameServer = {
   peerId: string
   adminToken: string
@@ -184,7 +181,7 @@ export async function createServer(
 
   async function sendStateToEveryone() {
     // Disable
-    return Promise.resolve()
+    // return Promise.resolve()
 
     return forAllServerPlayers(
       (player) =>
@@ -197,7 +194,7 @@ export async function createServer(
 
   async function sendMessage(msg: string, opts: t.MessageFormatOptions = {}) {
     // Disable
-    return Promise.resolve([])
+    // return Promise.resolve([])
 
     return forAllServerPlayers(
       (player) => player.clientRpc.onMessage(msg, opts),

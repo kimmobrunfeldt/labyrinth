@@ -15,3 +15,4 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -q -y install cmake libopenmpi-dev py
 # Install python deps
 RUN pip3 install gym opencv-python-headless stable-baselines3[extra] numpy
 RUN pip3 install websockets syncer nest_asyncio
+# RUN pip3 install tensorboard tensorflow

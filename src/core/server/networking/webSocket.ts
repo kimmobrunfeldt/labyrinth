@@ -36,6 +36,7 @@ async function _createServerNetworking(
   wss: WebSocketServer
 }> {
   const wss = new WebSocketServer({
+    // host: '0.0.0.0',
     port: opts.serverWebSocketPort,
   })
   opts.logger.info(
@@ -76,16 +77,16 @@ async function _createServerNetworking(
         }),
       })
       // Re-create the proxified functions for iteration to work
-      const clientRpcObj: t.RpcProxy<t.ClientRpcAPI> = wrapWithErrorIgnoring(
+      const clientRpcObj: t.RpcProxy<t.ClientRpcAPI> = wrapWithLogging(
         clientRpcLogger,
-        {
+        wrapWithErrorIgnoring(clientRpcLogger, {
           onJoin: (...args) => clientRpc.onJoin(...args),
           onStateChange: (...args) => clientRpc.onStateChange(...args),
           onMessage: (...args) => clientRpc.onMessage(...args),
           onPushPositionHover: (...args) =>
             clientRpc.onPushPositionHover(...args),
           onServerReject: (...args) => clientRpc.onServerReject(...args),
-        }
+        })
       )
       const notifyObj = _.mapValues(clientRpcObj, (val, key) => {
         return clientRpc.notify[key as keyof typeof clientRpc.notify]

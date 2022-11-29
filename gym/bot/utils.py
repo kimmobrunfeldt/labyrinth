@@ -1,4 +1,5 @@
 import json
+import itertools
 
 
 def counter():
@@ -65,6 +66,10 @@ def find(f, seq):
     for item in seq:
         if f(item):
             return item
+
+
+def flatten(l):
+    return list(itertools.chain.from_iterable(l))
 
 
 def get_player_position(pieces, playerId):

@@ -130,12 +130,22 @@ export function createGame(opts: CreateGameOptions) {
       { x: 0, y: game.board.pieces.length - 1 },
     ])
     game.players.forEach((player) => {
-      setPlayerPosition(player.id, assertDefined(corners.pop()))
-
       // Deal cards
       player.cards = _.times(game.settings.trophyCount).map(() =>
         assertDefined(gameState.cards.pop())
       )
+
+      //setPlayerPosition(player.id, assertDefined(corners.pop()))
+      // Use random position at start
+      let pos = { x: _.random(6), y: _.random(6) }
+      while (
+        getPieceAt(game.board as t.FilledBoard, pos).trophy ===
+        player.cards[0].trophy
+      ) {
+        pos = { x: _.random(6), y: _.random(6) }
+      }
+      logger.info('Set random position', pos, 'for player', player.name)
+      setPlayerPosition(player.id, pos)
     })
   })
 
@@ -449,7 +459,7 @@ export function createInitialState(cardsPerPlayer = 5) {
     turnCounter: 0,
     settings: {
       trophyCount: cardsPerPlayer,
-      shuffleLevel: 'hard',
+      shuffleLevel: 'easy',
     },
   }
   return initial
