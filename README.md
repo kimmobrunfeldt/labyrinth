@@ -8,6 +8,10 @@ on the host's browser and networking happens peer-to-peer.
 
 
 
+https://user-images.githubusercontent.com/1232405/208707395-7fcd2de7-a077-4243-8c76-f1398ff86db4.mov
+
+![](docs/demo-admin-panel.png)
+
 Note: the game might be very slow on mobile, as it might fallback to a public TURN server. Workaround is to use e.g. a Wifi network.
 
 Optimized for Chrome and iOS Safari. Uses React for the UI. _Clean React code was not the goal.._
