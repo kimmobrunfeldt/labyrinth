@@ -3,6 +3,7 @@
 Online version of the Labyrinth board game. The game server runs
 on the host's browser and networking happens peer-to-peer.
 
+Play at: https://labyrinth-boardgame.pages.dev/ 
 
 ![](docs/hand-holding-phone-mockup.png)
 
