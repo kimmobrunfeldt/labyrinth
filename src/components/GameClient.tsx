@@ -32,6 +32,7 @@ type Props = {
   serverPeerId: string
   adminToken?: string
   spectate?: boolean
+  showNextTrophy?: boolean
   wsUrl?: string
   onClientCreated: (client: Pick<Client, 'serverRpc'>) => void
 }
@@ -81,6 +82,11 @@ export const GameClient = (props: Props) => {
   const [playerLabelsVisible, setPlayerLabelsVisible] = useState(
     localStorage.getKey('playerLabelsHidden') !== 'true'
   )
+
+  const isSpectating = gameState?.players
+    ? gameState.players.every((p) => p.id !== gameState?.me.id)
+    : false
+  const shouldShowNextTropy = props.showNextTrophy || !isSpectating
 
   useEffect(() => {
     async function init() {
@@ -347,7 +353,7 @@ export const GameClient = (props: Props) => {
         />
       </div>
 
-      {gameState.stage !== 'setup' && myNextCard && (
+      {gameState.stage !== 'setup' && shouldShowNextTropy && myNextCard && (
         <NextTrophy trophy={myNextCard.trophy} />
       )}
 

@@ -14,7 +14,7 @@ export const App = () => {
   const [client, setClient] = useState<Pick<Client, 'serverRpc'> | undefined>(
     undefined
   )
-  const [server, setServer] = useState<
+  const [server, setServer] = React.useState<
     | {
         peerId: string
         adminToken?: string
@@ -25,7 +25,6 @@ export const App = () => {
   >(undefined)
 
   const params = new URLSearchParams(window.location.search)
-
   useEffect(() => {
     async function init() {
       const wsUrl = params.get('ws') ?? undefined
@@ -107,6 +106,7 @@ export const App = () => {
           serverPeerId={server.peerId}
           adminToken={server.adminToken}
           spectate={params.get('spectate') === 'true'}
+          showNextTrophy={params.get('showNextTrophy') === 'true'}
           onClientCreated={setClient}
           wsUrl={server.wsUrl}
         />
